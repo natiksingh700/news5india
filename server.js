@@ -417,7 +417,10 @@ async function autoUpdateAllNews(language = 'hi') {
   const targetDataFile = language === 'en' ? EN_DATA_FILE : DATA_FILE;
   console.log(`\n🔄 [Cycle #${updateCycle}] Fetching ${language.toUpperCase()} news from ${activeFeeds.length} feeds...`);
 
-  for (const feed of activeFeeds) {
+  // Fetch feeds in small parallel batches so language refreshes finish promptly.
+  for (let batchStart = 0; batchStart < activeFeeds.length; batchStart += 6) {
+    const batch = activeFeeds.slice(batchStart, batchStart + 6);
+    await Promise.all(batch.map(async feed => {
     try {
       const rawXml = await fetchRaw(feed.url);
       const parsedItems = parseXmlItems(rawXml, Math.max(feed.maxItems * 5, 20));
@@ -463,6 +466,7 @@ async function autoUpdateAllNews(language = 'hi') {
     } catch (err) {
       console.log(`   ⚠️ ${feed.category}${feed.stateName ? ' (' + feed.stateName + ')' : ''}: ${err.message}`);
     }
+    }));
   }
 
   if (allArticles.length > 0) {
