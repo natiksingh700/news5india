@@ -17,5 +17,9 @@
     "world-news-hindi"
   ],
   "author": "News5Indiaa Global Media Network",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^18.0.9",
+    "pg": "^8.23.1"
+  }
 }

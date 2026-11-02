@@ -2,6 +2,11 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
+require('dotenv').config();
+const { pool, initDB } = require('./db.js');
+
+// Initialize database tables on start
+initDB().catch(e => console.error('DB init warning:', e.message));
 
 let PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const ROOT = __dirname;
@@ -353,6 +358,31 @@ async function autoUpdateAllNews() {
     };
     fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
     console.log(`🤖 [News5Indiaa AI Engine] Total ${allArticles.length} REAL news articles saved! (Cycle #${updateCycle})\n`);
+
+    // ── Save/Upsert Articles to Neon PostgreSQL Database ──
+    try {
+      const client = await pool.connect();
+      try {
+        for (const art of allArticles) {
+          await client.query(`
+            INSERT INTO articles (id, title, excerpt, category, category_slug, author, date, read_time, image, views, content, state, state_name)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+            ON CONFLICT (id) DO UPDATE SET
+              views = EXCLUDED.views,
+              date = EXCLUDED.date;
+          `, [
+            art.id, art.title, art.excerpt, art.category, art.categorySlug,
+            art.author, art.date, art.readTime, art.image, art.views,
+            art.content, art.state || null, art.stateName || null
+          ]);
+        }
+        console.log(`💾 [Neon DB] Synchronized ${allArticles.length} articles to PostgreSQL database!`);
+      } finally {
+        client.release();
+      }
+    } catch (dbErr) {
+      console.error('⚠️ [Neon DB] Articles sync warning:', dbErr.message);
+    }
   } else {
     console.log(`⚠️ [Cycle #${updateCycle}] No articles fetched this round.\n`);
   }
@@ -498,6 +528,18 @@ function startServer(portToTry) {
             data.lastUpdated = new Date().toISOString();
             fs.writeFileSync(INSTA_DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
             console.log(`📸 [Instagram Auto-Sync Webhook] New Post Auto-Published: "${title}"`);
+
+            // ── Save to Neon PostgreSQL ──
+            pool.query(`
+              INSERT INTO instagram_stories (id, title, image, category, insta_url, date, views, is_instagram)
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+              ON CONFLICT (id) DO NOTHING;
+            `, [
+              newStory.id, newStory.title, newStory.image, newStory.category,
+              newStory.instaUrl, newStory.date, newStory.views, true
+            ]).then(() => {
+              console.log('💾 [Neon DB] Instagram story saved to PostgreSQL!');
+            }).catch(e => console.error('⚠️ [Neon DB] Story save warning:', e.message));
           }
 
           res.end(JSON.stringify({ success: true, story: newStory, total: data.stories.length }));
