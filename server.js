@@ -431,7 +431,7 @@ async function autoUpdateAllNews(language = 'hi') {
         seenTitles.add(key);
 
         const cleanExcerpt = item.description && item.description.length > 10 ? item.description : item.title;
-        const cleanContent = `<p><strong>स्रोत से प्राप्त समाचार-संक्षेप:</strong> ${item.title}</p>${cleanExcerpt !== item.title ? '<p>' + cleanExcerpt + '</p>' : ''}<p>यह संक्षेप RSS में उपलब्ध जानकारी पर आधारित है। पूरी रिपोर्ट के लिए मूल स्रोत देखें।</p>`;
+        const cleanContent = language === 'en' ? '<p><strong>News summary from source:</strong> ' + item.title + '</p>' + (cleanExcerpt !== item.title ? '<p>' + cleanExcerpt + '</p>' : '') + '<p>This summary is based on information available in the RSS feed. Read the original report for full details.</p>' : '<p><strong>स्रोत से प्राप्त समाचार-संक्षेप:</strong> ' + item.title + '</p>' + (cleanExcerpt !== item.title ? '<p>' + cleanExcerpt + '</p>' : '') + '<p>यह संक्षेप RSS में उपलब्ध जानकारी पर आधारित है। पूरी रिपोर्ट के लिए मूल स्रोत देखें।</p>';
 
         const article = {
           id: `live-${language}-${feed.categorySlug}-${ts}-${allArticles.length}`,
