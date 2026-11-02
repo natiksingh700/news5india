@@ -313,7 +313,12 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderTicker() {
     const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
     const breaking = data && data.breaking;
-    if (!breaking || !breaking.length || !elements.tickerSlider) return;
+    if (!elements.tickerSlider) return;
+    if (!Array.isArray(breaking) || !breaking.length) {
+      elements.tickerSlider.innerHTML = "";
+      state.tickerIndex = 0;
+      return;
+    }
     if (state.tickerIndex >= breaking.length || state.tickerIndex < 0) state.tickerIndex = 0;
 
     // Render all headlines into DOM
@@ -509,8 +514,8 @@ document.addEventListener("DOMContentLoaded", () => {
           <h3 class="news-card-title">${item.title}</h3>
           <p class="news-card-excerpt">${item.excerpt || ''}</p>
           <div class="news-card-footer">
-            <span class="views-count">👁️ ${item.views || '15K'} पाठक</span>
-            <span class="read-link">विस्तार से पढ़ें ›</span>
+            <span class="views-count">${item.source ? 'स्रोत: ' + item.source : (item.views && item.views !== '—' ? '👁️ ' + item.views + ' पाठक' : 'प्रकाशित समाचार')}</span>
+            <span class="read-link">मूल स्रोत सहित पढ़ें ›</span>
           </div>
         </div>
       </article>
@@ -696,6 +701,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     elements.modalArticleContent.innerHTML = article.content || `<p>${article.excerpt || article.title}</p>`;
+    if (article.articleUrl && /^https:\/\//i.test(article.articleUrl)) {
+      const sourceNote = document.createElement("p");
+      sourceNote.className = "article-source-link";
+      const sourceLink = document.createElement("a");
+      sourceLink.href = article.articleUrl;
+      sourceLink.target = "_blank";
+      sourceLink.rel = "noopener noreferrer";
+      sourceLink.textContent = `मूल खबर ${article.source ? '(' + article.source + ')' : 'के स्रोत'} पर पढ़ें ↗`;
+      sourceNote.appendChild(sourceLink);
+      elements.modalArticleContent.appendChild(sourceNote);
+    }
 
     resetTtsUi();
 
