@@ -499,9 +499,11 @@ function isRecentArticle(pubDate) {
 
 // ─── XML Parser (extracts title + description + pubDate + source) ─────────────
 function cleanHtmlEntities(str) {
-  return str
+  return String(str || '')
     .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&quot;/g, '"').replace(/&#39;|&apos;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => { const n = parseInt(hex, 16); return n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : ''; })
+    .replace(/&#(\d+);/g, (_, dec) => { const n = parseInt(dec, 10); return n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : ''; })
     .replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '');
 }
 
@@ -510,7 +512,7 @@ function stripAllHtml(str) {
   let decoded = cleanHtmlEntities(str);
   decoded = decoded.replace(/<[^>]*>?/gm, ''); // strip actual HTML tags
   decoded = decoded.replace(/https?:\/\/\S+/g, ''); // strip raw URLs
-  decoded = decoded.replace(/\s{2,}/g, ' ').trim();
+  decoded = decoded.replace(/\uFFFD/g, '').replace(/\s{2,}/g, ' ').trim();
   return decoded;
 }
 
@@ -532,7 +534,7 @@ function extractRssImage(itemXml) {
     if (srcsetMatch) candidates.push(srcsetMatch[1].split(',').pop().trim().split(/\s+/)[0]);
   }
   // Some feeds expose a thumbnail as a link in their description rather than an img.
-  const imageLinks = decodedItem.match(/https?:[^"'\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\s<>]*)?/gi) || [];
+  const imageLinks = decodedItem.match(/https?:[^"'\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\s<>]*)?/gi) || [];
   candidates.push(...imageLinks);
   for (let candidate of candidates) {
     candidate = cleanHtmlEntities(String(candidate).trim()).replace(/&amp;/g, '&');
