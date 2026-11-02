@@ -11,6 +11,9 @@ document.addEventListener("DOMContentLoaded", () => {
     currentLanguage: localStorage.getItem("news5_language") || "hi",
     currentState: "all",
     searchQuery: "",
+    searchResults: null,
+    searchLoading: false,
+    searchTimer: null,
     tickerIndex: 0,
     isTickerPlaying: true,
     tickerInterval: null,
@@ -635,6 +638,7 @@ document.addEventListener("DOMContentLoaded", () => {
      ========================================================================== */
   function getFilteredArticles() {
     const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    if (state.searchQuery && state.searchResults) return [...state.searchResults];
     if (!data || !Array.isArray(data.articles)) return [];
     let list = [...data.articles];
 
@@ -666,6 +670,29 @@ document.addEventListener("DOMContentLoaded", () => {
     return list;
   }
 
+  async function searchAllNews(query) {
+    const requestedQuery = String(query || '').trim();
+    if (requestedQuery.length < 2) return;
+    state.searchLoading = true;
+    renderNewsFeed();
+    try {
+      const response = await fetch('/api/search?q=' + encodeURIComponent(requestedQuery), { cache: 'no-store' });
+      const payload = await response.json();
+      if (state.searchQuery !== requestedQuery) return;
+      if (!response.ok) throw new Error(payload.error || 'Search unavailable');
+      state.searchResults = Array.isArray(payload.articles) ? payload.articles : [];
+    } catch (error) {
+      console.error('[News5India Search]', error);
+      state.searchResults = [];
+      showToast('अभी लाइव सर्च उपलब्ध नहीं है। दोबारा कोशिश करें।');
+    } finally {
+      if (state.searchQuery === requestedQuery) {
+        state.searchLoading = false;
+        renderNewsFeed();
+      }
+    }
+  }
+
   function renderNewsFeed() {
     if (!elements.newsCardsGrid) return;
     const filtered = getFilteredArticles();
@@ -682,6 +709,11 @@ document.addEventListener("DOMContentLoaded", () => {
       } else {
         elements.filterHeader.style.display = "none";
       }
+    }
+
+    if (state.searchLoading) {
+      elements.newsCardsGrid.innerHTML = `<div style="grid-column:1/-1;padding:38px;text-align:center;background:var(--bg-surface);border-radius:var(--radius-md)"><p style="font-size:1.1rem;font-weight:800">“${state.searchQuery}” की खबरें खोजी जा रही हैं…</p><p style="color:var(--text-muted)">भारत और दुनिया के समाचार स्रोत चेक हो रहे हैं।</p></div>`;
+      return;
     }
 
     if (!filtered.length) {
@@ -722,7 +754,7 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.newsCardsGrid.querySelectorAll(".news-card").forEach(card => {
       card.addEventListener("click", () => {
         const id = card.getAttribute("data-article-id");
-        const found = NEWS_DATA.articles.find(a => a.id === id);
+        const found = (state.searchResults || NEWS_DATA.articles).find(a => a.id === id);
         if (found) openArticleModal(found);
       });
     });
@@ -1227,12 +1259,24 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.clearSearchBtn.addEventListener("click", () => {
       elements.globalSearchInput.value = "";
       state.searchQuery = "";
+      state.searchResults = null;
+      state.searchLoading = false;
+      if (state.searchTimer) clearTimeout(state.searchTimer);
       renderNewsFeed();
     });
 
     elements.globalSearchInput.addEventListener("input", (e) => {
-      state.searchQuery = e.target.value;
+      state.searchQuery = e.target.value.trim();
+      state.searchResults = null;
+      state.searchLoading = state.searchQuery.length >= 2;
+      if (state.searchTimer) clearTimeout(state.searchTimer);
+      if (state.searchQuery.length < 2) {
+        state.searchLoading = false;
+        renderNewsFeed();
+        return;
+      }
       renderNewsFeed();
+      state.searchTimer = setTimeout(() => searchAllNews(state.searchQuery), 450);
     });
 
     elements.searchSuggestions.querySelectorAll(".tag-pill").forEach(pill => {
@@ -1240,6 +1284,11 @@ document.addEventListener("DOMContentLoaded", () => {
         const query = pill.getAttribute("data-search");
         elements.globalSearchInput.value = query;
         state.searchQuery = query;
+        state.searchResults = null;
+        state.searchLoading = true;
+        elements.globalSearchInput.value = query;
+        if (state.searchTimer) clearTimeout(state.searchTimer);
+        searchAllNews(query);
         renderNewsFeed();
         elements.newsCardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
       });
