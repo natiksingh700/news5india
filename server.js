@@ -338,7 +338,7 @@ async function autoUpdateAllNews() {
       const rawXml = await fetchRaw(feed.url);
       const parsedItems = parseXmlItems(rawXml, feed.maxItems);
       const items = parsedItems.filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) && isRecentArticle(item.pubDate));
-      console.log(\`   🔎 \${feed.category}: \${parsedItems.length - items.length} items withheld (untrusted source or stale date)\`);
+      console.log('   🔎 ' + feed.category + ': ' + (parsedItems.length - items.length) + ' items withheld (untrusted source or stale date)');
 
       items.forEach((item, i) => {
         // Deduplicate by title substring
@@ -417,7 +417,10 @@ async function autoUpdateAllNews() {
       console.error('⚠️ [Neon DB] Articles sync warning:', dbErr.message);
     }
   } else {
-    console.log(`⚠️ [Cycle #${updateCycle}] No articles fetched this round.\n`);
+    // Clear stale headlines when no fresh, allowlisted articles pass the checks.
+    const emptyPayload = { lastUpdated: new Date().toISOString(), totalArticles: 0, articles: [] };
+    fs.writeFileSync(DATA_FILE, JSON.stringify(emptyPayload, null, 2), 'utf-8');
+    console.log(`⚠️ [Cycle #${updateCycle}] No trusted, recent articles passed the checks.\n`);
   }
 }
 
