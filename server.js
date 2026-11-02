@@ -428,7 +428,42 @@ setInterval(pollInstagramLive, 5 * 60 * 1000);
 function startServer(portToTry) {
   const server = http.createServer((req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    const pathname = parsedUrl.pathname;
+    const pathname = parsedUrl.pathname;\n
+    if (pathname.startsWith('/api/auth/')) return handleAuthApi(req,res,pathname);
+
+    if (pathname === '/api/reels' && req.method === 'GET') {
+      try {
+        const result=await pool.query('SELECT id,title,description,video_url,thumbnail_url,category,created_at FROM reels ORDER BY created_at DESC LIMIT 60');
+        return sendJson(res,200,{reels:result.rows});
+      } catch(e) { return sendJson(res,500,{error:'रील्स लोड नहीं हो पाईं।'}); }
+    }
+    if (pathname === '/api/reels' && req.method === 'POST') {
+      const session=getSession(req);
+      if(!session || session.role!=='admin') return sendJson(res,403,{error:'यह सुविधा केवल Admin के लिए है।'});
+      try {
+        const body=await readJson(req);
+        const title=String(body.title||'').trim();
+        const description=String(body.description||'').trim();
+        const videoUrl=String(body.videoUrl||'').trim();
+        const thumbnailUrl=String(body.thumbnailUrl||'').trim();
+        const category=String(body.category||'Other').trim().slice(0,80);
+        const validUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'||u.protocol==='http:';}catch{return false;}};
+        if(!title || title.length>180) return sendJson(res,400,{error:'रील का title डालें (अधिकतम 180 अक्षर)।'});
+        if(!description || description.length>3000) return sendJson(res,400,{error:'Description डालें (अधिकतम 3000 अक्षर)।'});
+        if(!validUrl(videoUrl)) return sendJson(res,400,{error:'सही वीडियो या Instagram Reel URL डालें।'});
+        if(thumbnailUrl && !validUrl(thumbnailUrl)) return sendJson(res,400,{error:'Thumbnail URL सही नहीं है।'});
+        const result=await pool.query('INSERT INTO reels(title,description,video_url,thumbnail_url,category,created_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,title,description,video_url,thumbnail_url,category,created_at',[title,description,videoUrl,thumbnailUrl||null,category,session.id]);
+        return sendJson(res,201,{success:true,reel:result.rows[0]});
+      } catch(e) { console.error('Reel publish error:',e.message); return sendJson(res,400,{error:'रील पब्लिश नहीं हो पाई।'}); }
+    }
+    const deleteReelMatch=pathname.match(/^\/api\/reels\/(\d+)$/);
+    if(deleteReelMatch && req.method==='DELETE') {
+      const session=getSession(req);
+      if(!session || session.role!=='admin') return sendJson(res,403,{error:'यह सुविधा केवल Admin के लिए है।'});
+      try { await pool.query('DELETE FROM reels WHERE id=$1',[deleteReelMatch[1]]); return sendJson(res,200,{success:true}); }
+      catch(e) { return sendJson(res,500,{error:'रील हटाई नहीं जा सकी।'}); }
+    }
+
 
     // ── API: Get Instagram Stories ──
     if (pathname === '/api/instagram-stories') {
@@ -454,7 +489,20 @@ function startServer(portToTry) {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization'
       });
 
-      if (req.method === 'OPTIONS') {
+
+      if (pathname === '/api/add-insta-story') {
+        const session=getSession(req);
+        if(!session || session.role!=='admin') return sendJson(res,403,{success:false,error:'केवल Admin स्टोरी जोड़ सकता है।'});
+      }
+      if (pathname === '/api/instagram-webhook' && req.method === 'POST') {
+        const supplied=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
+        const secret=process.env.WEBHOOK_SECRET;
+        if(!secret || !supplied || supplied.length!==secret.length || !crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(secret))) {
+          return sendJson(res,401,{success:false,error:'Webhook authentication required.'});
+        }
+      }
+      if (pathname === '/api/instagram-webhook' && req.method !== 'POST' && req.method !== 'GET') return sendJson(res,405,{error:'Method not allowed'});
+\n      if (req.method === 'OPTIONS') {
         return res.end();
       }
 
@@ -462,7 +510,7 @@ function startServer(portToTry) {
       if (req.method === 'GET') {
         const hubMode = parsedUrl.searchParams.get('hub.mode');
         const hubChallenge = parsedUrl.searchParams.get('hub.challenge');
-        if (hubMode === 'subscribe' && hubChallenge) {
+        const expectedVerify=process.env.META_WEBHOOK_VERIFY_TOKEN;\n        const suppliedVerify=parsedUrl.searchParams.get('hub.verify_token');\n        if (hubMode === 'subscribe' && hubChallenge && expectedVerify && suppliedVerify===expectedVerify) {
           res.writeHead(200, { 'Content-Type': 'text/plain' });
           console.log('✅ [Instagram Webhook] Meta Webhook verified with challenge:', hubChallenge);
           return res.end(hubChallenge);
