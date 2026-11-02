@@ -4,8 +4,8 @@
   "description": "News5Indiaa - 24x7 AI Global News Network (Superior to m.jagran.com)",
   "main": "index.html",
   "scripts": {
-    "start": "npx --yes serve . -l 3000",
-    "dev": "npx --yes serve . -l 3000",
+    "start": "node server.js",
+    "dev": "node server.js",
     "ai-update": "node scripts/ai-updater.js",
     "ai-daemon": "node scripts/ai-updater.js --daemon"
   },
