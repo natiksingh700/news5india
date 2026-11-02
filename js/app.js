@@ -1005,8 +1005,21 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.modalArticleTitle.textContent = article.title;
     elements.modalAuthor.textContent = article.author || "News5Indiaa विशेष संवाददाता";
     elements.modalReadTime.textContent = article.readTime || "3 मिनट वाचन";
-    elements.modalImage.src = article.image || "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800";
-    elements.modalCaption.textContent = `फोटो साभार: News5Indiaa आर्काइव`;
+    const modalFigure = elements.modalImage.closest(".modal-figure");
+    const hasPublisherImage = !!(article.image && /^https:\/\//i.test(article.image) &&
+      article.imageSource !== "fallback" && !/images\.unsplash\.com/i.test(article.image));
+    if (modalFigure) modalFigure.hidden = !hasPublisherImage;
+    elements.modalImage.onerror = () => { if (modalFigure) modalFigure.hidden = true; };
+    if (hasPublisherImage) {
+      elements.modalImage.src = article.image;
+      elements.modalImage.alt = article.title || "News photograph";
+      elements.modalCaption.textContent = article.source
+        ? `फोटो: ${article.source}`
+        : "फोटो: संबंधित समाचार प्रकाशक";
+    } else {
+      elements.modalImage.removeAttribute("src");
+      elements.modalCaption.textContent = "";
+    }
 
     if (article.bullets && article.bullets.length) {
       elements.modalBulletsWrap.style.display = "block";
