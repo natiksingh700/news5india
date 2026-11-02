@@ -180,42 +180,52 @@ document.addEventListener("DOMContentLoaded", () => {
      ========================================================================== */
   async function silentBackgroundSync() {
     try {
-      const res = await fetch("data/live-news.json?t=" + Date.now());
+      const res = await fetch("data/live-news.json?t=" + Date.now(), { cache: "no-store" });
       if (res.ok) {
-        const data = await res.json();
-        if (data.articles && data.articles.length) {
-          // Merge silently into NEWS_DATA.articles if not already present
-          const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
-          if (target && Array.isArray(target.articles)) {
-            data.articles.forEach(art => {
-              if (!target.articles.some(existing => existing.id === art.id)) {
-                target.articles.unshift(art);
-              }
-            });
-            // Keep breaking news ticker fresh with the top 5 newest live headlines
-            if (Array.isArray(target.breaking) && data.articles.length >= 3) {
-              target.breaking = data.articles.slice(0, 5).map((a, i) => ({
-                id: `brk-${a.id}`,
-                title: a.title,
-                category: a.category,
-                time: a.date || 'अभी-अभी'
-              }));
-            }
-            renderNewsFeed();
+        const liveData = await res.json();
+        const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+        if (target && Array.isArray(target.articles) && Array.isArray(liveData.articles) && liveData.articles.length) {
+          // Replace the previous auto-fetched set instead of keeping stale live headlines forever.
+          const editorialArticles = target.articles.filter(article => !String(article.id).startsWith("live-"));
+          target.articles = [...liveData.articles, ...editorialArticles].slice(0, 120);
+
+          // The newest fetched article also drives the homepage lead story.
+          const newest = liveData.articles[0];
+          if (newest) {
+            target.leadStory = {
+              ...newest,
+              subtitle: newest.excerpt || newest.title,
+              bullets: [],
+              date: newest.date || "अभी-अभी",
+              readTime: newest.readTime || "2 मिनट"
+            };
+            renderLeadStory();
+          }
+
+          // Refresh the ticker from the latest RSS headlines.
+          if (Array.isArray(target.breaking)) {
+            target.breaking = liveData.articles.slice(0, 5).map(article => ({
+              id: `brk-${article.id}`,
+              title: article.title,
+              category: article.category,
+              time: article.date || "अभी-अभी"
+            }));
+            state.tickerIndex = 0;
             renderTicker();
           }
+          renderNewsFeed();
         }
       }
     } catch (e) {
-      // silent
+      console.warn("Live news sync failed:", e.message);
     }
 
-    // Also fetch Instagram Stories silently
+    // Also fetch Instagram Stories silently.
     try {
-      const instaRes = await fetch("data/instagram-stories.json?t=" + Date.now());
+      const instaRes = await fetch("data/instagram-stories.json?t=" + Date.now(), { cache: "no-store" });
       if (instaRes.ok) {
         const instaData = await instaRes.json();
-        if (instaData.stories && instaData.stories.length) {
+        if (Array.isArray(instaData.stories) && instaData.stories.length) {
           const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
           if (target) {
             target.webStories = instaData.stories;
@@ -223,8 +233,8 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
       }
-    } catch(e) {
-      // silent
+    } catch (e) {
+      // Keep the news feed working even if Instagram sync is unavailable.
     }
   }
 
@@ -304,6 +314,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
     const breaking = data && data.breaking;
     if (!breaking || !breaking.length || !elements.tickerSlider) return;
+    if (state.tickerIndex >= breaking.length || state.tickerIndex < 0) state.tickerIndex = 0;
 
     // Render all headlines into DOM
     elements.tickerSlider.innerHTML = breaking.map((item, idx) => `
