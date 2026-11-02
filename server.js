@@ -508,7 +508,12 @@ async function runNewsUpdate(language = 'hi') {
           source: item.source,
           articleUrl: item.articleUrl,
           readTime: language === 'en' ? '2 min' : '2 मिनट',
-          image: item.imageUrl || (() => {
+          image: (() => {
+            const sourceImage = item.imageUrl && /^https:\/\//i.test(item.imageUrl) ? item.imageUrl : '';
+            if (sourceImage && !usedFallbackImages.has(sourceImage)) {
+              usedFallbackImages.add(sourceImage);
+              return sourceImage;
+            }
             const candidates = Array.isArray(feed.images) ? feed.images : [];
             const uniqueImage = candidates.find(url => url && !usedFallbackImages.has(url));
             if (uniqueImage) { usedFallbackImages.add(uniqueImage); return uniqueImage; }
