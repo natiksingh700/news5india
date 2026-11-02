@@ -590,7 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (url.protocol === "http:") url.protocol = "https:";
       if (/(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(url.hostname.toLowerCase())) return "";
       if (/(logo|favicon|placeholder|no-image|default-image|avatar|profile|icon)([-_.\/]|$)/i.test(url.pathname)) return "";
-      return original;
+      return url.href;
     } catch { return ""; }
   }
 
