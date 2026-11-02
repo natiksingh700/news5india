@@ -190,24 +190,26 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     const vowels = {"अ":"a","आ":"aa","इ":"i","ई":"ee","उ":"u","ऊ":"oo","ऋ":"ri","ए":"e","ऐ":"ai","ओ":"o","औ":"au"};
     const marks = {"ा":"aa","ि":"i","ी":"ee","ु":"u","ू":"oo","ृ":"ri","े":"e","ै":"ai","ो":"o","ौ":"au","ं":"n","ँ":"n","ः":"h"};
-    const chars = Array.from(String(input || ""));
-    let out = "";
-    for (let i = 0; i < chars.length; i++) {
-      const ch = chars[i];
-      if (consonants[ch]) {
-        let syllable = consonants[ch] + "a";
-        const next = chars[i + 1];
-        if (next === "्") { syllable = consonants[ch]; i++; }
-        else if (marks[next]) { syllable = consonants[ch] + marks[next]; i++; }
-        out += syllable;
-      } else if (vowels[ch]) out += vowels[ch];
-      else if (marks[ch]) out += marks[ch];
-      else if (ch === "्" || ch === "़" || ch === "‍" || ch === "‌") continue;
-      else out += ch;
-    }
-    return out.replace(/a\b/gi, "").replace(/\s+/g, " ").trim();
+    return String(input || "").split(/(\s+)/).map(word => {
+      if (!/[\u0900-\u097F]/.test(word)) return word;
+      const chars = Array.from(word);
+      let out = "";
+      for (let i = 0; i < chars.length; i++) {
+        const ch = chars[i];
+        if (consonants[ch]) {
+          let syllable = consonants[ch] + "a";
+          const next = chars[i + 1];
+          if (next === "्") { syllable = consonants[ch]; i++; }
+          else if (marks[next]) { syllable = consonants[ch] + marks[next]; i++; }
+          out += syllable;
+        } else if (vowels[ch]) out += vowels[ch];
+        else if (marks[ch]) out += marks[ch];
+        else if (ch === "्" || ch === "़" || ch === "‍" || ch === "‌") continue;
+        else out += ch;
+      }
+      return out.replace(/a\b/gi, "");
+    }).join("");
   }
-
   function hinglishArticle(article) {
     const copy = { ...article };
     ["title", "excerpt", "category", "author", "date", "stateName"].forEach(key => {
