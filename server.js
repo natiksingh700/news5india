@@ -567,7 +567,9 @@ async function authRoute(req,res,path){
         }
       }
 
-      if (req.method === 'GET') return json(res,405,{success:false,error:'GET webhook publishing is disabled'});\n\n      const handleAdd = (params) => {
+      if (req.method === 'GET') return json(res,405,{success:false,error:'GET webhook publishing is disabled'});
+
+      const handleAdd = (params) => {
         try {
           // Normalize payload from Meta Graph API, Zapier, Make.com, or direct form
           let title = '';
