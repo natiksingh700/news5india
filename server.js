@@ -579,7 +579,7 @@ function currentSession(req) {
 }
 function setCookie(res,value,age=SESSION_TTL){res.setHeader('Set-Cookie',SESSION_COOKIE+'='+value+'; HttpOnly; Path=/; SameSite=Lax; Max-Age='+age+(process.env.NODE_ENV==='production'?'; Secure':''));}
 function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
-function readBody(req){return new Promise((resolve,reject)=>{let b='';req.on('data',c=>{b+=c;if(b.length>1000000){reject(new Error('Too large'));req.destroy();}});req.on('end',()=>{try{resolve(JSON.parse(b||'{}'));}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
+function readBody(req,maxBytes=1000000){return new Promise((resolve,reject)=>{let b='',size=0;req.on('data',c=>{size+=c.length;if(size>maxBytes){reject(new Error('Too large'));req.destroy();return;}b+=c.toString('utf8');});req.on('end',()=>{try{resolve(JSON.parse(b||'{}'));}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
 async function initAdmin(){
   const password=process.env.ADMIN_PASSWORD,email=process.env.ADMIN_EMAIL||'admin_news5india@news5india.local',username=process.env.ADMIN_USERNAME||'admin_news5india';
   if(!password||!email){console.warn('Admin setup needs ADMIN_PASSWORD and ADMIN_EMAIL environment variables.');return;}
@@ -635,6 +635,58 @@ function startServer(portToTry) {
       if(!user||user.role!=='admin') return json(res,403,{error:'केवल Admin रील हटा सकता है।'});
       try { await pool.query('DELETE FROM reels WHERE id=$1',[deleteReel[1]]); return json(res,200,{success:true}); }
       catch(e) { return json(res,500,{error:'रील हटाई नहीं जा सकी।'}); }
+    }
+
+    // Public active sticky advertisement.
+    if (pathname === '/api/advertisements' && req.method === 'GET') {
+      try {
+        const q = await pool.query('SELECT id,title,sponsor,click_url,image_data,mime_type,created_at FROM advertisements WHERE is_active=TRUE ORDER BY created_at DESC LIMIT 1');
+        return json(res,200,{advertisement:q.rows[0] || null});
+      } catch(e) {
+        console.error('Advertisement load:',e.message);
+        return json(res,500,{error:'विज्ञापन लोड नहीं हो पाया।'});
+      }
+    }
+    // Admin uploads/replaces the single sticky sidebar ad. Maximum image size: 2.5 MB.
+    if (pathname === '/api/advertisements' && req.method === 'POST') {
+      const user=currentSession(req);
+      if(!user || user.role!=='admin') return json(res,403,{error:'यह सुविधा केवल Admin के लिए है।'});
+      try {
+        const x=await readBody(req,4_000_000);
+        const title=String(x.title||'').trim().slice(0,140);
+        const sponsor=String(x.sponsor||'प्रायोजित').trim().slice(0,100);
+        const clickUrl=String(x.clickUrl||'').trim();
+        const image=String(x.imageData||'');
+        const match=image.match(/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/);
+        const validUrl=value=>{try{return ['http:','https:'].includes(new URL(value).protocol);}catch{return false;}};
+        if(!title || !match || (clickUrl && !validUrl(clickUrl))) return json(res,400,{error:'विज्ञापन का नाम, सही इमेज और वैध लिंक (यदि हो) जरूरी है।'});
+        const mime='image/'+match[1],bytes=Buffer.from(match[2],'base64');
+        if(bytes.length>2_500_000) return json(res,413,{error:'इमेज 2.5 MB से छोटी रखें।'});
+        const signatureOk = mime==='image/png' ? bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))
+          : mime==='image/jpeg' ? bytes[0]===0xff && bytes[1]===0xd8 && bytes[2]===0xff
+          : bytes.toString('ascii',0,4)==='RIFF' && bytes.toString('ascii',8,12)==='WEBP';
+        if(!signatureOk) return json(res,400,{error:'इमेज फाइल सही PNG, JPG या WEBP होनी चाहिए।'});
+        await pool.query('UPDATE advertisements SET is_active=FALSE WHERE is_active=TRUE');
+        const q=await pool.query(
+          'INSERT INTO advertisements(title,sponsor,click_url,image_data,mime_type,is_active,created_by) VALUES($1,$2,$3,$4,$5,TRUE,$6) RETURNING id,title,sponsor,click_url,created_at',
+          [title,sponsor||'प्रायोजित',clickUrl||null,image,mime,user.id]
+        );
+        return json(res,201,{success:true,advertisement:q.rows[0]});
+      } catch(e) {
+        console.error('Advertisement publish:',e.message);
+        return json(res,e.message==='Too large'?413:400,{error:e.message==='Too large'?'इमेज बहुत बड़ी है। 2.5 MB से छोटी इमेज अपलोड करें।':'विज्ञापन सेव नहीं हो पाया।'});
+      }
+    }
+    const deleteAd=pathname.match(/^\/api\/advertisements\/(\d+)$/);
+    if(deleteAd && req.method==='DELETE') {
+      const user=currentSession(req);
+      if(!user || user.role!=='admin') return json(res,403,{error:'केवल Admin विज्ञापन हटा सकता है।'});
+      try {
+        await pool.query('DELETE FROM advertisements WHERE id=$1',[deleteAd[1]]);
+        return json(res,200,{success:true});
+      } catch(e) {
+        return json(res,500,{error:'विज्ञापन हटाया नहीं जा सका।'});
+      }
     }
 
     // ── API: Get Instagram Stories ──
