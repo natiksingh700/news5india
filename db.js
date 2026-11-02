@@ -75,6 +75,25 @@ async function initDB() {
       );
     `);
 
+    // 5. Admin-managed sticky sidebar advertisement. Images are stored persistently in PostgreSQL.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS advertisements (
+        id BIGSERIAL PRIMARY KEY,
+        title VARCHAR(140) NOT NULL,
+        sponsor VARCHAR(100) DEFAULT 'प्रायोजित',
+        click_url TEXT,
+        image_data TEXT NOT NULL,
+        mime_type VARCHAR(40) NOT NULL,
+        is_active BOOLEAN NOT NULL DEFAULT TRUE,
+        created_by BIGINT REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+    await client.query(`
+      CREATE UNIQUE INDEX IF NOT EXISTS advertisements_single_active_idx
+      ON advertisements ((is_active)) WHERE is_active = TRUE
+    `);
+
     console.log('✅ [Neon PostgreSQL] Database tables initialized successfully!');
   } catch (err) {
     console.error('❌ [Neon PostgreSQL] Init error:', err.message);
