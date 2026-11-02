@@ -182,7 +182,7 @@
         const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('इमेज पढ़ी नहीं जा सकी।'));reader.readAsDataURL(file);
       });
       await api('/api/advertisements',{method:'POST',body:JSON.stringify({
-        slotNo:title:$('n5AdTitle').value.trim(),sponsor:$('n5AdSponsor').value.trim(),
+        title:$('n5AdTitle').value.trim(),sponsor:$('n5AdSponsor').value.trim(),
         clickUrl:$('n5AdLink').value.trim(),imageData
       })});
       adForm.reset();
