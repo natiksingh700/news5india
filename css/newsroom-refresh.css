@@ -356,3 +356,101 @@ body{background:#f0f2f5}
  .news-card-title{font-size:14px}
  .sidebar-column{display:flex}
 }
+
+
+/* FIX: restore promo-card themes after the universal sidebar-card surface */
+.sidebar-column>.epaper-promo-card{
+  background:linear-gradient(135deg,#1e3a8a 0%,#172554 58%,#0f172a 100%)!important;
+  color:#fff!important;
+  border:1px solid #263d70!important;
+  min-height:220px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  gap:8px;
+}
+.sidebar-column>.epaper-promo-card .promo-badge{
+  align-self:flex-start;
+  background:#f59e0b!important;
+  color:#111!important;
+}
+.sidebar-column>.epaper-promo-card h4{
+  color:#fff!important;
+  font-size:21px;
+  line-height:1.3;
+  margin:2px 0;
+}
+.sidebar-column>.epaper-promo-card p{
+  color:#e2e8f0!important;
+  font-size:14px;
+  line-height:1.55;
+  margin:0 0 8px;
+}
+.sidebar-column>.epaper-promo-card .promo-cta-btn{
+  display:block;
+  min-height:44px;
+  background:#fff!important;
+  color:#1e3a8a!important;
+  border:0;
+  font-weight:900;
+}
+.sidebar-column>a.social-ad-card.insta-ad-card{
+  background:linear-gradient(125deg,#405de6 0%,#833ab4 28%,#c13584 58%,#e1306c 82%,#fd1d1d 100%)!important;
+  color:#fff!important;
+  border:1px solid #d64b8b!important;
+  min-height:205px;
+  display:flex;
+  align-items:center;
+}
+.sidebar-column>a.social-ad-card.fb-ad-card{
+  background:linear-gradient(125deg,#1877f2 0%,#0d6efd 55%,#0a4ebd 100%)!important;
+  color:#fff!important;
+  border:1px solid #1767d2!important;
+  min-height:205px;
+  display:flex;
+  align-items:center;
+}
+.sidebar-column .social-ad-card .social-ad-content,
+.sidebar-column .social-ad-card .social-ad-title-group,
+.sidebar-column .social-ad-card .social-ad-header{
+  color:#fff!important;
+}
+.sidebar-column .social-ad-card .social-ad-handle{
+  color:#fff!important;
+  font-size:17px;
+  font-weight:900;
+}
+.sidebar-column .social-ad-card .social-ad-desc{
+  color:rgba(255,255,255,.96)!important;
+  font-size:13px;
+  line-height:1.5;
+}
+.sidebar-column .social-ad-card .social-ad-badge{
+  color:#fff!important;
+  background:rgba(0,0,0,.24)!important;
+}
+.sidebar-column .social-ad-card .social-ad-icon-wrap{
+  color:#fff!important;
+  background:rgba(255,255,255,.2)!important;
+}
+.sidebar-column .social-ad-card .social-ad-btn{
+  display:flex;
+  width:100%;
+  min-height:42px;
+  align-items:center;
+  justify-content:center;
+  background:#fff!important;
+  font-weight:900;
+}
+.sidebar-column .insta-ad-card .social-ad-btn{color:#c13584!important}
+.sidebar-column .fb-ad-card .social-ad-btn{color:#0d6efd!important}
+@media(max-width:900px){
+  .sidebar-column>.epaper-promo-card,
+  .sidebar-column>a.social-ad-card{min-height:190px}
+}
+@media(max-width:640px){
+  .sidebar-column>.epaper-promo-card,
+  .sidebar-column>a.social-ad-card{min-height:0;padding:18px}
+  .sidebar-column .social-ad-card .social-ad-content{width:100%;gap:11px}
+  .sidebar-column .social-ad-card .social-ad-desc{font-size:13px}
+}
