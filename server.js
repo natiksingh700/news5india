@@ -6,7 +6,7 @@ require('dotenv').config();
 const { pool, initDB } = require('./db.js');
 
 // Initialize database tables on start
-initDB().catch(e => console.error('DB init warning:', e.message));
+// Database initialization and admin bootstrap run together below.
 
 let PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const ROOT = __dirname;
@@ -478,6 +478,21 @@ function startServer(portToTry) {
         return res.end(JSON.stringify({ stories: [] }));
       }
     }
+
+    // Protect all legacy story-publishing endpoints. GET is read-only verification only.
+    if (pathname === '/api/add-insta-story') {
+      const user = currentSession(req);
+      if (!user || user.role !== 'admin') return json(res,403,{success:false,error:'केवल Admin स्टोरी जोड़ सकता है।'});
+      if (req.method !== 'POST') return json(res,405,{success:false,error:'POST required'});
+    }
+    if (pathname === '/api/instagram-webhook' && req.method === 'POST') {
+      const supplied = (req.headers.authorization || '').replace(/^Bearer\\s+/i,'');
+      const secret = process.env.WEBHOOK_SECRET || '';
+      if (!secret || supplied.length !== secret.length || !crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(secret))) {
+        return json(res,401,{success:false,error:'Webhook authentication required'});
+      }
+    }
+    if (pathname === '/api/instagram-webhook' && req.method !== 'POST' && req.method !== 'GET' && req.method !== 'OPTIONS') return json(res,405,{error:'Method not allowed'});
 
     // ── API: Instagram Webhook (Meta Graph API / Zapier / Make.com / IFTTT) ──
     if (pathname === '/api/instagram-webhook' || pathname === '/api/add-insta-story') {
