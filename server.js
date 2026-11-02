@@ -621,11 +621,11 @@ async function getInstagramThumbnail(videoUrl) {
     const finalUrl = new URL(response.url);
     if (!['instagram.com', 'www.instagram.com'].includes(finalUrl.hostname)) return null;
     const html = await response.text();
-    const tags = html.match(/<meta\\b[^>]*>/gi) || [];
+    const tags = html.match(/<meta\b[^>]*>/gi) || [];
     for (const tag of tags) {
-      if (!/property\\s*=\\s*["']og:image["']/i.test(tag) && !/name\\s*=\\s*["']twitter:image["']/i.test(tag)) continue;
-      const match = tag.match(/content\\s*=\\s*["']([^"']+)["']/i);
-      if (match && /^https:\\/\\//i.test(match[1])) return match[1].replace(/&amp;/g, '&').replace(/&#038;/g, '&');
+      if (!/property\s*=\s*["']og:image["']/i.test(tag) && !/name\s*=\s*["']twitter:image["']/i.test(tag)) continue;
+      const match = tag.match(/content\s*=\s*["']([^"']+)["']/i);
+      if (match && /^https:\/\//i.test(match[1])) return match[1].replace(/&amp;/g, '&').replace(/&#038;/g, '&');
     }
   } catch (e) {
     console.warn('Instagram thumbnail auto-detect unavailable:', e.message);
