@@ -731,35 +731,26 @@
   </div>
 
 
-  <!-- E-Paper Modal -->
+  <!-- Daily E-Paper Modal -->
   <div class="modal-backdrop" id="epaperModalBackdrop" hidden>
-    <div class="epaper-modal" role="dialog" aria-modal="true">
+    <div class="epaper-modal" role="dialog" aria-modal="true" aria-labelledby="epaperModalTitle">
       <div class="epaper-modal-header">
-        <h3>News5Indiaa डिजिटल ई-पेपर</h3>
-        <button type="button" id="closeEpaperBtn" class="close-modal-btn">✕</button>
+        <h3 id="epaperModalTitle">News5India दैनिक ई-पेपर</h3>
+        <button type="button" id="closeEpaperBtn" class="close-modal-btn" aria-label="बंद करें">✕</button>
       </div>
       <div class="epaper-modal-body">
-        <p><strong>दिनांक:</strong> 25 अक्टूबर 2026 | <strong>संस्करण:</strong> दिल्ली-एनसीआर (मुख्य पृष्ठ)</p>
-        <div class="epaper-page-preview">
-          <div class="epaper-paper-sheet">
-            <div class="epaper-masthead">
-              <h2>NEWS 5 INDIAA</h2>
-              <p>दैनिक राष्ट्रीय संस्करण • मूल्य ₹5.00 • वर्ष 12, अंक 298</p>
-            </div>
-            <div class="epaper-columns-mock">
-              <div class="mock-col">
-                <h4>स्वदेशी 6G व AI में भारत का नया वैश्विक कीर्तिमान</h4>
-                <p>नई दिल्ली। भारत ने आधुनिक आर्टिफिशियल इंटेलिजेंस और 6G तकनीक के क्षेत्र में असाधारण सफलता प्राप्त की है...</p>
-              </div>
-              <div class="mock-col">
-                <h4>सेंसेक्स 85,000 के ऐतिहासिक शिखर पर</h4>
-                <p>मुंबई। घरेलू संस्थागत निवेशकों की भारी खरीदारी और मजबूत वैश्विक संकेतों से बाजार में तेजी...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="epaper-download-cta">
-          <button type="button" class="btn-primary-action" onclick="alert('ई-पेपर पीडीएफ डाउनलोड शुरू हो रहा है...')">📥 पूरा ई-पेपर डाउनलोड करें (PDF)</button>
+        <div class="epaper-real-info">
+          <div class="epaper-real-icon">📰</div>
+          <h4>आज का पूरा अखबार — ताज़ा खबरों के साथ</h4>
+          <p>इस संस्करण में वेबसाइट की ताज़ा सत्यापित खबरें, मुख्य समाचार, देश-दुनिया, राज्य, राजनीति, खेल, कारोबार और मनोरंजन की खबरें अखबार के पन्नों की तरह व्यवस्थित मिलेंगी।</p>
+          <ul>
+            <li>आज की तारीख और दैनिक संस्करण</li>
+            <li>मुख्य खबर, हेडलाइन और खबरों के संक्षेप</li>
+            <li>कैटेगरी के अनुसार अखबार का लेआउट</li>
+            <li>प्रिंट या PDF में सेव करने का विकल्प</li>
+          </ul>
+          <button type="button" class="btn-primary-action" id="downloadEpaperBtn">📥 आज का ई-पेपर खोलें / PDF डाउनलोड करें</button>
+          <p class="epaper-print-hint">ई-पेपर खुलने के बाद “PDF डाउनलोड / प्रिंट करें” दबाएं और प्रिंट विंडो में “Save as PDF” चुनें।</p>
         </div>
       </div>
     </div>
