@@ -481,7 +481,8 @@ async function authRoute(req,res,path){
   }
   return json(res,404,{error:'Not found'});
 }
-\nfunction startServer(portToTry) {
+
+function startServer(portToTry) {
   const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
