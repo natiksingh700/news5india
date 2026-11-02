@@ -444,7 +444,7 @@ async function autoUpdateAllNews(language = 'hi') {
           publishedAt: item.pubDate || null,
           source: item.source,
           articleUrl: item.articleUrl,
-          readTime: "2 मिनट",
+          readTime: language === 'en' ? '2 min' : '2 मिनट',
           image: feed.images[i % feed.images.length],
           views: "—",
           content: cleanContent
