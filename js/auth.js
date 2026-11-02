@@ -26,6 +26,9 @@
     const currentAd=$('n5AdCurrent');
     if(currentAd)currentAd.hidden=!(user&&user.role==='admin');
     if(user&&user.role==='admin')loadAdminAdvertisement();
+    const savedSection=$('n5SavedReelsSection');
+    if(savedSection)savedSection.hidden=!user;
+    loadSavedReels();
   }
   async function api(url,options={}){
     const res=await fetch(url,{credentials:'same-origin',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
@@ -97,36 +100,70 @@
       });
     }catch(e){current.textContent='विज्ञापन की जानकारी लोड नहीं हो पाई।';}
   }
+  function buildReelCard(reel, savedIds, inSavedSection=false){
+    const card=document.createElement('article');card.className='n5-reel-card';
+    let media;
+    if(/\\.mp4($|\\?)/i.test(reel.video_url)){
+      media=document.createElement('video');media.src=reel.video_url;media.controls=true;media.playsInline=true;media.preload='metadata';
+      if(reel.thumbnail_url)media.poster=reel.thumbnail_url;
+    }else{
+      media=document.createElement('a');media.href=reel.video_url;media.target='_blank';media.rel='noopener noreferrer';
+      const img=document.createElement('img');img.className='n5-reel-media';img.src=reel.thumbnail_url||'assets/logo-badge.jpg';img.alt=reel.title;media.append(img);
+      const label=document.createElement('span');label.textContent='रील देखें ↗';label.style.cssText='display:block;padding:8px;color:#b5121b;font-weight:800';media.append(label);
+    }
+    card.append(media);
+    const copy=document.createElement('div');copy.className='n5-reel-copy';
+    const title=document.createElement('h3');title.textContent=reel.title;
+    const desc=document.createElement('p');desc.textContent=reel.description;
+    const category=document.createElement('small');category.textContent=reel.category||'News';category.style.color='#b5121b';
+    copy.append(category,title,desc);
+    if(user){
+      const isSaved=savedIds.has(String(reel.id));
+      const save=document.createElement('button');save.type='button';save.className='n5-account-btn n5-save-reel-btn';
+      save.textContent=inSavedSection?'✓ Saved — हटाएं':(isSaved?'✓ Saved':'🔖 Save Reel');
+      save.setAttribute('aria-pressed',String(isSaved));
+      save.addEventListener('click',async()=>{
+        save.disabled=true;
+        try{
+          await api('/api/reels/'+reel.id+'/saved',{method:isSaved?'DELETE':'POST',body:'{}'});
+          await loadReels();
+        }catch(e){alert(e.message);}finally{save.disabled=false;}
+      });
+      copy.append(save);
+    }else{
+      const save=document.createElement('button');save.type='button';save.className='n5-account-btn n5-save-reel-btn';save.textContent='🔖 Save Reel';
+      save.addEventListener('click',()=>{backdrop.hidden=false;setMode('login');message.textContent='रील सेव करने के लिए लॉगिन करें या अकाउंट बनाएं।';});
+      copy.append(save);
+    }
+    if(user&&user.role==='admin'){
+      const del=document.createElement('button');del.type='button';del.textContent='रील हटाएं';del.className='n5-account-btn';
+      del.addEventListener('click',async()=>{if(!confirm('क्या आप यह रील हटाना चाहते हैं?'))return;try{await api('/api/reels/'+reel.id,{method:'DELETE'});await loadReels();}catch(e){alert(e.message);}});
+      copy.append(del);
+    }
+    card.append(copy);return card;
+  }
+  async function loadSavedReels(){
+    const section=$('n5SavedReelsSection'),grid=$('n5SavedReelsGrid');
+    if(!section||!grid)return;
+    section.hidden=!user;
+    if(!user){grid.replaceChildren();return;}
+    try{
+      const data=await api('/api/reels/saved');grid.replaceChildren();
+      if(!data.reels.length){grid.textContent='अभी आपने कोई रील सेव नहीं की है।';return;}
+      const ids=new Set(data.reels.map(reel=>String(reel.id)));
+      data.reels.forEach(reel=>grid.append(buildReelCard(reel,ids,true)));
+    }catch(e){grid.textContent=e.message;}
+  }
   async function loadReels(){
     const grid=$('n5ReelsGrid');if(!grid)return;
     try{
       const data=await api('/api/reels');
+      const savedData=user?await api('/api/reels/saved'):{reels:[]};
+      const savedIds=new Set(savedData.reels.map(reel=>String(reel.id)));
       grid.replaceChildren();
-      if(!data.reels.length){grid.textContent='अभी कोई रील प्रकाशित नहीं हुई है।';return;}
-      data.reels.forEach(reel=>{
-        const card=document.createElement('article');card.className='n5-reel-card';
-        let media;
-        if(/\.mp4($|\?)/i.test(reel.video_url)){
-          media=document.createElement('video');media.src=reel.video_url;media.controls=true;media.playsInline=true;media.preload='metadata';
-          if(reel.thumbnail_url)media.poster=reel.thumbnail_url;
-        }else{
-          media=document.createElement('a');media.href=reel.video_url;media.target='_blank';media.rel='noopener noreferrer';
-          const img=document.createElement('img');img.className='n5-reel-media';img.src=reel.thumbnail_url||'assets/logo-badge.jpg';img.alt=reel.title;media.append(img);
-          const label=document.createElement('span');label.textContent='रील देखें ↗';label.style.cssText='display:block;padding:8px;color:#b5121b;font-weight:800';media.append(label);
-        }
-        card.append(media);
-        const copy=document.createElement('div');copy.className='n5-reel-copy';
-        const title=document.createElement('h3');title.textContent=reel.title;
-        const desc=document.createElement('p');desc.textContent=reel.description;
-        const category=document.createElement('small');category.textContent=reel.category||'News';category.style.color='#b5121b';
-        copy.append(category,title,desc);
-        if(user&&user.role==='admin'){
-          const del=document.createElement('button');del.type='button';del.textContent='रील हटाएं';del.className='n5-account-btn';
-          del.addEventListener('click',async()=>{if(!confirm('क्या आप यह रील हटाना चाहते हैं?'))return;try{await api('/api/reels/'+reel.id,{method:'DELETE'});loadReels();}catch(e){alert(e.message);}});
-          copy.append(del);
-        }
-        card.append(copy);grid.append(card);
-      });
+      if(!data.reels.length){grid.textContent='अभी कोई रील प्रकाशित नहीं हुई है।';}
+      else data.reels.forEach(reel=>grid.append(buildReelCard(reel,savedIds,false)));
+      await loadSavedReels();
     }catch(e){grid.textContent='रील्स लोड नहीं हो पाईं।';}
   }
   account.addEventListener('click',()=>user?$('n5AdminPanel').scrollIntoView({behavior:'smooth'}):(backdrop.hidden=false,setMode('login')));
