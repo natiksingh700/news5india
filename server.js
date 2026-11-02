@@ -425,8 +425,64 @@ setInterval(pollInstagramLive, 5 * 60 * 1000);
 /* ==========================================================================
    HTTP WEB SERVER
    ========================================================================== */
-function startServer(portToTry) {
-  const server = http.createServer((req, res) => {
+
+const crypto = require('crypto');
+const { promisify } = require('util');
+const scrypt = promisify(crypto.scrypt);
+const SESSION_SECRET = process.env.SESSION_SECRET || crypto.randomBytes(48).toString('hex');
+const SESSION_COOKIE = 'n5_session';
+const SESSION_TTL = 604800;
+async function hashPass(pass) {
+  const salt=crypto.randomBytes(16).toString('hex');
+  return salt+':'+Buffer.from(await scrypt(pass,salt,64)).toString('hex');
+}
+async function verifyPass(pass,stored) {
+  try {const [salt,hash]=stored.split(':');const actual=Buffer.from(await scrypt(pass,salt,64)).toString('hex');const a=Buffer.from(hash,'hex'),b=Buffer.from(actual,'hex');return a.length===b.length&&crypto.timingSafeEqual(a,b);}catch{return false;}
+}
+function sessionFor(user) {
+  const payload=Buffer.from(JSON.stringify({id:user.id,username:user.username,role:user.role,exp:Math.floor(Date.now()/1000)+SESSION_TTL})).toString('base64url');
+  return payload+'.'+crypto.createHmac('sha256',SESSION_SECRET).update(payload).digest('base64url');
+}
+function currentSession(req) {
+  const item=(req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(SESSION_COOKIE+'='));
+  if(!item)return null;const parts=item.slice(SESSION_COOKIE.length+1).split('.');
+  if(parts.length!==2)return null;
+  const expected=crypto.createHmac('sha256',SESSION_SECRET).update(parts[0]).digest(),got=Buffer.from(parts[1],'base64url');
+  if(expected.length!==got.length||!crypto.timingSafeEqual(expected,got))return null;
+  try{const u=JSON.parse(Buffer.from(parts[0],'base64url').toString());return u.exp>Date.now()/1000?u:null;}catch{return null;}
+}
+function setCookie(res,value,age=SESSION_TTL){res.setHeader('Set-Cookie',SESSION_COOKIE+'='+value+'; HttpOnly; Path=/; SameSite=Lax; Max-Age='+age+(process.env.NODE_ENV==='production'?'; Secure':''));}
+function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
+function readBody(req){return new Promise((resolve,reject)=>{let b='';req.on('data',c=>{b+=c;if(b.length>1000000){reject(new Error('Too large'));req.destroy();}});req.on('end',()=>{try{resolve(JSON.parse(b||'{}'));}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
+async function initAdmin(){
+  const password=process.env.ADMIN_PASSWORD,email=process.env.ADMIN_EMAIL,username=process.env.ADMIN_USERNAME||'admin_news5india';
+  if(!password||!email){console.warn('Admin setup needs ADMIN_PASSWORD and ADMIN_EMAIL environment variables.');return;}
+  const hash=await hashPass(password);
+  await pool.query("INSERT INTO users(username,email,password_hash,role) VALUES($1,$2,$3,'admin') ON CONFLICT(username) DO UPDATE SET email=EXCLUDED.email,password_hash=EXCLUDED.password_hash,role='admin'",[username,email,hash]);
+}
+initDB().then(initAdmin).catch(e=>console.error('Database initialization failed:',e.message));
+async function authRoute(req,res,path){
+  if(path==='/api/auth/me'&&req.method==='GET'){const u=currentSession(req);return json(res,200,{authenticated:!!u,user:u?{id:u.id,username:u.username,role:u.role}:null});}
+  if(path==='/api/auth/logout'&&req.method==='POST'){setCookie(res,'',0);return json(res,200,{success:true});}
+  if(path==='/api/auth/register'&&req.method==='POST'){
+    try{const x=await readBody(req),username=String(x.username||'').trim(),email=String(x.email||'').trim().toLowerCase(),password=String(x.password||'');
+      if(!/^[a-zA-Z0-9_]{3,40}$/.test(username))return json(res,400,{error:'Username 3-40 अक्षर का रखें।'});
+      if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return json(res,400,{error:'सही ईमेल डालें।'});
+      if(password.length<8||password.length>128)return json(res,400,{error:'Password 8-128 अक्षर का होना चाहिए।'});
+      const hash=await hashPass(password),q=await pool.query("INSERT INTO users(username,email,password_hash,role) VALUES($1,$2,$3,'user') RETURNING id,username,role",[username,email,hash]);
+      setCookie(res,sessionFor(q.rows[0]));return json(res,201,{success:true,user:q.rows[0]});
+    }catch(e){return json(res,e.code==='23505'?409:400,{error:e.code==='23505'?'Username या email पहले से मौजूद है।':'अकाउंट नहीं बन पाया।'});}
+  }
+  if(path==='/api/auth/login'&&req.method==='POST'){
+    try{const x=await readBody(req),identifier=String(x.identifier||'').trim(),q=await pool.query('SELECT id,username,password_hash,role FROM users WHERE lower(username)=lower($1) OR lower(email)=lower($1) LIMIT 1',[identifier]),u=q.rows[0];
+      if(!u||!(await verifyPass(String(x.password||''),u.password_hash)))return json(res,401,{error:'Username/email या password गलत है।'});
+      setCookie(res,sessionFor(u));return json(res,200,{success:true,user:{id:u.id,username:u.username,role:u.role}});
+    }catch(e){return json(res,500,{error:'Login नहीं हो पाया।'});}
+  }
+  return json(res,404,{error:'Not found'});
+}
+\nfunction startServer(portToTry) {
+  const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;\n
     if (pathname.startsWith('/api/auth/')) return handleAuthApi(req,res,pathname);
