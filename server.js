@@ -329,6 +329,7 @@ async function autoUpdateAllNews() {
           categorySlug: feed.categorySlug,
           author: feed.author + (item.source ? ` (${item.source})` : ''),
           date: formatHindiTime(item.pubDate),
+          publishedAt: item.pubDate || null,
           readTime: `${Math.floor(Math.random() * 3) + 2} मिनट`,
           image: feed.images[i % feed.images.length],
           views: `${(Math.random() * 30 + 5).toFixed(1)}K`,
@@ -351,6 +352,8 @@ async function autoUpdateAllNews() {
   }
 
   if (allArticles.length > 0) {
+    // Put the newest RSS publication first so the homepage lead and ticker are current.
+    allArticles.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
     const payload = {
       lastUpdated: new Date().toISOString(),
       totalArticles: allArticles.length,
