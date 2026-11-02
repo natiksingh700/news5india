@@ -48,6 +48,33 @@ async function initDB() {
       );
     `);
 
+
+    // 3. User accounts (public users and the single configured admin)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id BIGSERIAL PRIMARY KEY,
+        username VARCHAR(40) NOT NULL UNIQUE,
+        email VARCHAR(254) NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (role IN ('user','admin')),
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // 4. Admin-published reels. Existing Instagram stories are left untouched.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS reels (
+        id BIGSERIAL PRIMARY KEY,
+        title VARCHAR(180) NOT NULL,
+        description TEXT NOT NULL,
+        video_url TEXT NOT NULL,
+        thumbnail_url TEXT,
+        category VARCHAR(80) DEFAULT 'Other',
+        created_by BIGINT REFERENCES users(id),
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('✅ [Neon PostgreSQL] Database tables initialized successfully!');
   } catch (err) {
     console.error('❌ [Neon PostgreSQL] Init error:', err.message);

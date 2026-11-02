@@ -56,6 +56,7 @@
           <span class="theme-icon" id="themeIcon">🌙</span>
         </button>
 
+        <button type="button" id="n5AccountBtn" class="n5-account-btn">लॉगिन / साइन अप</button>
         <!-- Live TV Trigger -->
         <button type="button" id="btnTopLiveTv" class="live-tv-badge pulse-badge" aria-label="लाइव टीवी देखें">
           <span class="live-dot"></span> LIVE TV
@@ -260,7 +261,7 @@
               </span>
             </h2>
             <div class="stories-header-actions">
-              <button type="button" class="btn-insta-sync-guide" id="openAddInstaModalBtn" title="Instagram ऑटो-सिंक सेंटर">
+              <button type="button" class="btn-insta-sync-guide" id="openAddInstaModalBtn" hidden title="Instagram ऑटो-सिंक सेंटर">
                 <span>⚡ ऑटो-सिंक सेंटर</span>
               </button>
               <a href="https://www.instagram.com/news5indiaa?dlrf=MXZ1ZHV0dTZhOW4xdw==" target="_blank" rel="noopener noreferrer" class="btn-insta-pill" title="News 5 India Instagram पेज देखें">
@@ -464,7 +465,9 @@
                 <li>✓ सोशल मीडिया (Insta/FB) प्रमोशन</li>
                 <li>✓ 24x7 टार्गेटेड ऑडियंस रीच</li>
               </ul>
-              <a href="mailto:ads@news5india.com" class="btn-sticky-cta" onclick="event.preventDefault(); alert('विज्ञापन बुकिंग एवं मीडिया किट के लिए संपर्क करें:\nईमेल: ads@news5indiaa.com\nफोन: +91 98765 00005');">विज्ञापन के लिए संपर्क करें ›</a>
+              <a href="mailto:ads@news5india.com" class="btn-sticky-cta" onclick="event.preventDefault(); alert('विज्ञापन बुकिंग एवं मीडिया किट के लिए संपर्क करें:
+ईमेल: ads@news5indiaa.com
+फोन: +91 98765 00005');">विज्ञापन के लिए संपर्क करें ›</a>
             </div>
           </div>
         </div>
@@ -760,6 +763,33 @@
     </div>
   </div>
 
+  <div class="n5-auth-backdrop" id="n5AuthBackdrop" hidden>
+    <section class="n5-auth-card" role="dialog" aria-modal="true">
+      <button type="button" id="n5AuthClose" class="n5-auth-close">×</button>
+      <div class="n5-auth-brand">NEWS 5 INDIA</div><h2 id="n5AuthTitle">लॉगिन करें</h2>
+      <div class="n5-auth-tabs"><button type="button" id="n5LoginTab" class="active">लॉगिन</button><button type="button" id="n5RegisterTab">नया अकाउंट</button></div>
+      <form id="n5AuthForm">
+        <label id="n5IdentifierLabel" for="n5AuthIdentifier">यूज़रनेम या ईमेल</label><input id="n5AuthIdentifier" required maxlength="120" autocomplete="username">
+        <div id="n5EmailField" hidden><label for="n5AuthEmail">ईमेल</label><input id="n5AuthEmail" type="email" autocomplete="email"></div>
+        <label for="n5AuthPassword">पासवर्ड</label><input id="n5AuthPassword" type="password" minlength="8" required autocomplete="current-password">
+        <button type="submit" id="n5AuthSubmit" class="n5-auth-submit">लॉगिन करें</button><p id="n5AuthMessage" class="n5-auth-message"></p>
+      </form>
+    </section>
+  </div>
+  <button type="button" id="n5LogoutBtn" class="n5-logout-btn" hidden>लॉगआउट</button>
+  <section class="n5-admin-panel container" id="n5AdminPanel" hidden>
+    <h2>🔒 Admin Reel Studio</h2>
+    <form id="n5ReelForm" class="n5-reel-form">
+      <label for="n5ReelTitle">रील का टाइटल *</label><input id="n5ReelTitle" required maxlength="180">
+      <label for="n5ReelCategory">कैटेगरी</label><select id="n5ReelCategory"><option>Breaking News</option><option>Mathura News</option><option>Uttar Pradesh</option><option>Politics</option><option>Crime</option><option>Sports</option><option>Entertainment</option><option>Ground Report</option><option>Other</option></select>
+      <label for="n5ReelDescription">रील का Description *</label><textarea id="n5ReelDescription" required maxlength="3000" rows="4" placeholder="Description और #hashtags लिखें"></textarea>
+      <label for="n5ReelVideo">रील / वीडियो URL *</label><input id="n5ReelVideo" type="url" required>
+      <label for="n5ReelThumbnail">Thumbnail URL (वैकल्पिक)</label><input id="n5ReelThumbnail" type="url">
+      <button type="submit" id="n5ReelPublish" class="n5-reel-publish">🚀 रील पब्लिश करें</button><p id="n5ReelMessage" class="n5-auth-message"></p>
+    </form>
+  </section>
+  <section class="n5-public-reels container" id="n5PublicReels"><h2>लेटेस्ट वीडियो और रील्स</h2><div id="n5ReelsGrid" class="n5-reels-grid"></div></section>
+
   <!-- Toast Notification -->
   <div class="toast-notification" id="toastNotification" role="alert" aria-live="assertive"></div>
 
@@ -841,5 +871,6 @@
   <!-- Scripts -->
   <script src="js/news-data.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/auth.js"></script>
 </body>
 </html>
