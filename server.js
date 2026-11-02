@@ -526,10 +526,8 @@ function extractRssImage(itemXml) {
   }
   const htmlImageTags = decodedItem.match(/<img\b[^>]*>/gi) || [];
   for (const tag of htmlImageTags) {
-    for (const attr of ['src','data-src','data-original','data-lazy-src','data-original-src','data-url']) {
-      const match = tag.match(new RegExp(String.raw\`\\b\${attr}\\s*=\\s*(?:"([^"]+)"|'([^']+)')\`, 'i'));
-      if (match) candidates.push(match[1] || match[2]);
-    }
+    const attrMatch = tag.match(/\b(?:src|data-src|data-original|data-lazy-src|data-original-src|data-url)\s*=\s*(?:"([^"]+)"|'([^']+)')/i);
+    if (attrMatch) candidates.push(attrMatch[1] || attrMatch[2]);
     const srcsetMatch = tag.match(/\b(?:srcset|data-srcset)\s*=\s*["']([^"']+)["']/i);
     if (srcsetMatch) candidates.push(srcsetMatch[1].split(',').pop().trim().split(/\s+/)[0]);
   }
