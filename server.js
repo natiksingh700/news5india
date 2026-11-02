@@ -322,13 +322,13 @@ async function getPublisherImage(articleUrl) {
 }
 
 async function enrichPublisherImages(articles, maxItems = 24, concurrency = 4) {
-  const targets = articles.filter(item => !item.image || !/^https:\/\//i.test(item.image)).slice(0, maxItems);
+  const targets = articles.filter(item => item.articleUrl && (item.imageSource === 'fallback' || !item.image || !/^https:\/\//i.test(item.image))).slice(0, maxItems);
   let cursor = 0;
   const workers = Array.from({length: Math.min(concurrency, targets.length)}, async () => {
     while (cursor < targets.length) {
       const item = targets[cursor++];
       const image = await getPublisherImage(item.articleUrl);
-      if (image) item.image = image;
+      if (image) { item.image = image; item.imageSource = 'publisher'; }
     }
   });
   await Promise.all(workers);
@@ -551,17 +551,8 @@ async function runNewsUpdate(language = 'hi') {
           source: item.source,
           articleUrl: item.articleUrl,
           readTime: language === 'en' ? '2 min' : '2 मिनट',
-          image: (() => {
-            const sourceImage = item.imageUrl && /^https:\/\//i.test(item.imageUrl) ? item.imageUrl : '';
-            if (sourceImage && !usedFallbackImages.has(sourceImage)) {
-              usedFallbackImages.add(sourceImage);
-              return sourceImage;
-            }
-            const candidates = Array.isArray(feed.images) ? feed.images : [];
-            const uniqueImage = candidates.find(url => url && !usedFallbackImages.has(url));
-            if (uniqueImage) { usedFallbackImages.add(uniqueImage); return uniqueImage; }
-            return '';
-          })(),
+          image: item.imageUrl && /^https:\/\//i.test(item.imageUrl) ? item.imageUrl : '',
+          imageSource: item.imageUrl && /^https:\/\//i.test(item.imageUrl) ? 'rss' : 'fallback',
           views: "—",
           content: cleanContent
         };
@@ -832,6 +823,60 @@ function startServer(portToTry) {
       const documentHtml = buildEpaperHtml(language);
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       return res.end(documentHtml);
+    }
+    if (pathname === '/api/search' && req.method === 'GET') {
+      const query = String(parsedUrl.searchParams.get('q') || '').trim().slice(0, 120);
+      if (query.length < 2) return json(res, 400, { error: 'कम से कम 2 अक्षर लिखें।', articles: [] });
+      try {
+        const encoded = encodeURIComponent(query);
+        const urls = [
+          'https://news.google.com/rss/search?q=' + encoded + '&hl=hi&gl=IN&ceid=IN:hi',
+          'https://news.google.com/rss/search?q=' + encoded + '&hl=en-IN&gl=IN&ceid=IN:en',
+          'https://news.google.com/rss/search?q=' + encoded + '&hl=en-US&gl=US&ceid=US:en'
+        ];
+        const feeds = await Promise.all(urls.map(async url => {
+          try { return parseXmlItems(await fetchRaw(url), 30); } catch (err) {
+            console.warn('[Search] Feed unavailable:', err.message);
+            return [];
+          }
+        }));
+        const seen = new Set();
+        const articles = [];
+        for (const item of feeds.flat()) {
+          const key = String(item.title || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, '').slice(0, 90);
+          const published = Date.parse(item.pubDate || '');
+          const age = Date.now() - published;
+          if (!item.title || !key || seen.has(key) || !isTrustedPublisher(item.source) ||
+              !/^https:\/\//i.test(item.articleUrl) || !Number.isFinite(published) ||
+              age < -60 * 60 * 1000 || age > 30 * 24 * 60 * 60 * 1000 ||
+              requiresEditorialReview(item)) continue;
+          seen.add(key);
+          const excerpt = item.description && item.description.length > 10 ? item.description : item.title;
+          articles.push({
+            id: 'search-' + Buffer.from(key).toString('base64url').slice(0, 32),
+            title: item.title,
+            excerpt,
+            category: 'Search Results / खोज परिणाम',
+            categorySlug: 'search',
+            author: 'News5India Search Desk',
+            date: formatHindiTime(item.pubDate),
+            publishedAt: item.pubDate,
+            source: item.source,
+            articleUrl: item.articleUrl,
+            readTime: '2 मिनट',
+            image: item.imageUrl && /^https:\/\//i.test(item.imageUrl) ? item.imageUrl : '',
+            imageSource: item.imageUrl ? 'rss' : 'fallback',
+            views: '—',
+            content: '<p><strong>स्रोत:</strong> ' + escapeEpaperHtml(item.source || 'News publisher') + '</p><p>' + escapeEpaperHtml(excerpt) + '</p><p>यह खोज परिणाम प्रकाशक की उपलब्ध रिपोर्ट पर आधारित है। पूरी जानकारी के लिए मूल खबर खोलें।</p>'
+          });
+        }
+        articles.sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+        await enrichPublisherImages(articles, 24, 4);
+        return json(res, 200, { query, totalArticles: articles.length, articles });
+      } catch (err) {
+        console.error('[Search] Failed:', err.message);
+        return json(res, 502, { error: 'अभी खोज उपलब्ध नहीं है। थोड़ी देर बाद कोशिश करें।', articles: [] });
+      }
     }
     if (pathname === '/api/news' && req.method === 'GET') {
       const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
