@@ -33,44 +33,68 @@
     if(!res.ok)throw new Error(data.error||'Request असफल रहा।');
     return data;
   }
-  function renderPublicAd(ad){
+  function renderPublicAds(ads){
     const slot=$('stickySponsorAd');
-    if(!slot || !ad || !ad.image_data)return;
+    if(!slot||!Array.isArray(ads)||!ads.length)return;
     slot.replaceChildren();
-    const strip=document.createElement('div');strip.className='ad-tag-strip';
-    const label=document.createElement('span');label.className='ad-label';label.textContent='विज्ञापन';
-    const sponsor=document.createElement('span');sponsor.className='ad-sponsor';sponsor.textContent=ad.sponsor||'प्रायोजित';
-    strip.append(label,sponsor);
-    const visual=document.createElement('div');visual.className='n5-sticky-ad-content';
-    const image=document.createElement('img');image.src=ad.image_data;image.alt=ad.title||'Sponsored advertisement';image.loading='lazy';
-    image.className='n5-sticky-ad-image';
-    if(ad.click_url){
-      const link=document.createElement('a');link.href=ad.click_url;link.target='_blank';link.rel='noopener noreferrer sponsored';link.setAttribute('aria-label',ad.title||'विज्ञापन खोलें');link.append(image);visual.append(link);
-    }else visual.append(image);
-    const caption=document.createElement('p');caption.className='n5-sticky-ad-title';caption.textContent=ad.title||'प्रायोजित विज्ञापन';
-    visual.append(caption);slot.append(strip,visual);
+    ads.slice(0,3).forEach(ad=>{
+      if(!ad.image_data)return;
+      const card=document.createElement('div');card.className='n5-public-ad-slot';
+      const strip=document.createElement('div');strip.className='ad-tag-strip';
+      const label=document.createElement('span');label.className='ad-label';label.textContent='विज्ञापन';
+      const sponsor=document.createElement('span');sponsor.className='ad-sponsor';sponsor.textContent=ad.sponsor||'प्रायोजित';
+      strip.append(label,sponsor);
+      const visual=document.createElement('div');visual.className='n5-sticky-ad-content';
+      const image=document.createElement('img');image.src=ad.image_data;image.alt=ad.title||'Sponsored advertisement';image.loading='lazy';image.className='n5-sticky-ad-image';
+      if(ad.click_url){
+        const link=document.createElement('a');link.href=ad.click_url;link.target='_blank';link.rel='noopener noreferrer sponsored';link.setAttribute('aria-label',ad.title||'विज्ञापन खोलें');link.append(image);visual.append(link);
+      }else visual.append(image);
+      const caption=document.createElement('p');caption.className='n5-sticky-ad-title';caption.textContent=ad.title||'प्रायोजित विज्ञापन';
+      visual.append(caption);card.append(strip,visual);slot.append(card);
+    });
   }
   async function loadAdvertisement(){
-    try{
-      const data=await api('/api/advertisements');
-      if(data.advertisement)renderPublicAd(data.advertisement);
-    }catch(e){console.warn('Advertisement load failed:',e.message);}
+    try{const data=await api('/api/advertisements');renderPublicAds(data.advertisements||[]);}
+    catch(e){console.warn('Advertisement load failed:',e.message);}
   }
   async function loadAdminAdvertisement(){
     const current=$('n5AdCurrent');if(!current)return;
     try{
-      const data=await api('/api/advertisements');
+      const data=await api('/api/advertisements'),ads=data.advertisements||[];
       current.replaceChildren();
-      if(!data.advertisement){current.textContent='अभी कोई active विज्ञापन नहीं है।';return;}
-      const ad=data.advertisement;
-      const preview=document.createElement('img');preview.src=ad.image_data;preview.alt=ad.title;preview.className='n5-admin-ad-preview';
-      const info=document.createElement('p');info.textContent=ad.title+' • '+(ad.sponsor||'प्रायोजित');
-      const remove=document.createElement('button');remove.type='button';remove.className='n5-account-btn';remove.textContent='विज्ञापन हटाएं';
-      remove.addEventListener('click',async()=>{
-        if(!confirm('क्या आप active विज्ञापन हटाना चाहते हैं?'))return;
-        try{await api('/api/advertisements/'+ad.id,{method:'DELETE'});current.textContent='विज्ञापन हटा दिया गया।';const slot=$('stickySponsorAd');if(slot)slot.replaceChildren();}catch(e){alert(e.message);}
+      [1,2,3].forEach(slotNo=>{
+        const ad=ads.find(item=>Number(item.slot_no)===slotNo);
+        const card=document.createElement('div');card.className='n5-admin-ad-slot'+(ad?' is-filled':'');
+        const heading=document.createElement('strong');heading.textContent='Ad Slot '+slotNo+(ad?' — '+ad.title:' — खाली');card.append(heading);
+        if(ad){
+          const preview=document.createElement('img');preview.src=ad.image_data;preview.alt=ad.title;preview.className='n5-admin-ad-preview';
+          const info=document.createElement('p');info.textContent=ad.sponsor||'प्रायोजित';card.append(preview,info);
+        }else{
+          const empty=document.createElement('p');empty.textContent='अभी कोई विज्ञापन नहीं';card.append(empty);
+        }
+        const choose=document.createElement('button');choose.type='button';choose.className='n5-account-btn';
+        choose.textContent=ad?'इस स्लॉट को बदलें':'इस स्लॉट में जोड़ें';
+        choose.addEventListener('click',()=>{
+          $('n5AdSlot').value=String(slotNo);
+          $('n5AdTitle').value=ad?ad.title:'';
+          $('n5AdSponsor').value=ad?(ad.sponsor||''):'';
+          $('n5AdLink').value=ad?(ad.click_url||''):'';
+          $('n5AdImage').value='';
+          $('n5AdMessage').textContent=ad?'Ad Slot '+slotNo+' चुना है। नई फोटो अपलोड करके Publish करें।':'Ad Slot '+slotNo+' खाली है। फोटो अपलोड करें।';
+          $('n5AdForm').scrollIntoView({behavior:'smooth',block:'center'});
+        });
+        card.append(choose);
+        if(ad){
+          const remove=document.createElement('button');remove.type='button';remove.className='n5-account-btn';remove.textContent='हटाएं';
+          remove.addEventListener('click',async()=>{
+            if(!confirm('Ad Slot '+slotNo+' का विज्ञापन हटाएं?'))return;
+            try{await api('/api/advertisements/'+ad.id,{method:'DELETE'});await loadAdvertisement();await loadAdminAdvertisement();}
+            catch(e){alert(e.message);}
+          });
+          card.append(remove);
+        }
+        current.append(card);
       });
-      current.append(preview,info,remove);
     }catch(e){current.textContent='विज्ञापन की जानकारी लोड नहीं हो पाई।';}
   }
   async function loadReels(){
@@ -135,10 +159,12 @@
         const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('इमेज पढ़ी नहीं जा सकी।'));reader.readAsDataURL(file);
       });
       await api('/api/advertisements',{method:'POST',body:JSON.stringify({
-        title:$('n5AdTitle').value.trim(),sponsor:$('n5AdSponsor').value.trim(),
+        slotNo:Number($('n5AdSlot').value),title:$('n5AdTitle').value.trim(),sponsor:$('n5AdSponsor').value.trim(),
         clickUrl:$('n5AdLink').value.trim(),imageData
       })});
-      adForm.reset();message.textContent='विज्ञापन सफलतापूर्वक पब्लिश हो गया!';
+      const savedSlot=$('n5AdSlot').value;
+      adForm.reset();$('n5AdSlot').value=savedSlot;
+      message.textContent='Ad Slot '+savedSlot+' का विज्ञापन सेव हो गया!';
       await loadAdvertisement();await loadAdminAdvertisement();
     }catch(err){message.textContent=err.message;}finally{button.disabled=false;}
   });
