@@ -324,7 +324,7 @@ async function getPublisherImage(articleUrl) {
 async function enrichPublisherImages(articles, maxItems = 24, concurrency = 4) {
   const targets = articles.filter(item => item.articleUrl && (
     item.imageSource === 'fallback' || !item.image || !/^https:\/\//i.test(item.image) ||
-    /(?:^|\\.)google(?:usercontent|apis|\.com)|gstatic\\.com|news\\.google\\.com/i.test(String(item.image || ''))
+    /(?:^|\.)google(?:usercontent|apis|\.com)|gstatic\.com|news\.google\.com/i.test(String(item.image || ''))
   )).slice(0, maxItems);
   let cursor = 0;
   const workers = Array.from({length: Math.min(concurrency, targets.length)}, async () => {
@@ -332,7 +332,7 @@ async function enrichPublisherImages(articles, maxItems = 24, concurrency = 4) {
       const item = targets[cursor++];
       const image = await getPublisherImage(item.articleUrl);
       if (image) { item.image = image; item.imageSource = 'publisher'; }
-      else if (/(?:^|\\.)google(?:usercontent|apis|\\.com)|gstatic\\.com|news\\.google\\.com/i.test(String(item.image || ''))) { item.image = ''; item.imageSource = 'fallback'; }
+      else if (/(?:^|\.)google(?:usercontent|apis|\.com)|gstatic\.com|news\.google\.com/i.test(String(item.image || ''))) { item.image = ''; item.imageSource = 'fallback'; }
     }
   });
   await Promise.all(workers);
