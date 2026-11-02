@@ -485,41 +485,29 @@ async function authRoute(req,res,path){
   const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;\n
-    if (pathname.startsWith('/api/auth/')) return handleAuthApi(req,res,pathname);
-
+    if (pathname.startsWith('/api/auth/')) return authRoute(req,res,pathname);
     if (pathname === '/api/reels' && req.method === 'GET') {
-      try {
-        const result=await pool.query('SELECT id,title,description,video_url,thumbnail_url,category,created_at FROM reels ORDER BY created_at DESC LIMIT 60');
-        return sendJson(res,200,{reels:result.rows});
-      } catch(e) { return sendJson(res,500,{error:'रील्स लोड नहीं हो पाईं।'}); }
+      try { const q=await pool.query('SELECT id,title,description,video_url,thumbnail_url,category,created_at FROM reels ORDER BY created_at DESC LIMIT 60'); return json(res,200,{reels:q.rows}); }
+      catch(e) { return json(res,500,{error:'रील्स लोड नहीं हो पाईं।'}); }
     }
     if (pathname === '/api/reels' && req.method === 'POST') {
-      const session=getSession(req);
-      if(!session || session.role!=='admin') return sendJson(res,403,{error:'यह सुविधा केवल Admin के लिए है।'});
+      const user=currentSession(req);
+      if(!user || user.role!=='admin') return json(res,403,{error:'यह सुविधा केवल Admin के लिए है।'});
       try {
-        const body=await readJson(req);
-        const title=String(body.title||'').trim();
-        const description=String(body.description||'').trim();
-        const videoUrl=String(body.videoUrl||'').trim();
-        const thumbnailUrl=String(body.thumbnailUrl||'').trim();
-        const category=String(body.category||'Other').trim().slice(0,80);
-        const validUrl=value=>{try{const u=new URL(value);return u.protocol==='https:'||u.protocol==='http:';}catch{return false;}};
-        if(!title || title.length>180) return sendJson(res,400,{error:'रील का title डालें (अधिकतम 180 अक्षर)।'});
-        if(!description || description.length>3000) return sendJson(res,400,{error:'Description डालें (अधिकतम 3000 अक्षर)।'});
-        if(!validUrl(videoUrl)) return sendJson(res,400,{error:'सही वीडियो या Instagram Reel URL डालें।'});
-        if(thumbnailUrl && !validUrl(thumbnailUrl)) return sendJson(res,400,{error:'Thumbnail URL सही नहीं है।'});
-        const result=await pool.query('INSERT INTO reels(title,description,video_url,thumbnail_url,category,created_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,title,description,video_url,thumbnail_url,category,created_at',[title,description,videoUrl,thumbnailUrl||null,category,session.id]);
-        return sendJson(res,201,{success:true,reel:result.rows[0]});
-      } catch(e) { console.error('Reel publish error:',e.message); return sendJson(res,400,{error:'रील पब्लिश नहीं हो पाई।'}); }
+        const x=await readBody(req),title=String(x.title||'').trim(),description=String(x.description||'').trim(),video=String(x.videoUrl||'').trim(),thumb=String(x.thumbnailUrl||'').trim(),category=String(x.category||'Other').slice(0,80);
+        const valid=v=>{try{return ['http:','https:'].includes(new URL(v).protocol);}catch{return false;}};
+        if(!title||title.length>180||!description||description.length>3000||!valid(video)||(thumb&&!valid(thumb))) return json(res,400,{error:'Title, description और सही video URL जरूरी हैं।'});
+        const q=await pool.query('INSERT INTO reels(title,description,video_url,thumbnail_url,category,created_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,title,description,video_url,thumbnail_url,category,created_at',[title,description,video,thumb||null,category,user.id]);
+        return json(res,201,{success:true,reel:q.rows[0]});
+      } catch(e) { console.error('Reel publish:',e.message); return json(res,400,{error:'रील पब्लिश नहीं हो पाई।'}); }
     }
-    const deleteReelMatch=pathname.match(/^\/api\/reels\/(\d+)$/);
-    if(deleteReelMatch && req.method==='DELETE') {
-      const session=getSession(req);
-      if(!session || session.role!=='admin') return sendJson(res,403,{error:'यह सुविधा केवल Admin के लिए है।'});
-      try { await pool.query('DELETE FROM reels WHERE id=$1',[deleteReelMatch[1]]); return sendJson(res,200,{success:true}); }
-      catch(e) { return sendJson(res,500,{error:'रील हटाई नहीं जा सकी।'}); }
+    const deleteReel=pathname.match(/^\/api\/reels\/(\d+)$/);
+    if(deleteReel && req.method==='DELETE') {
+      const user=currentSession(req);
+      if(!user||user.role!=='admin') return json(res,403,{error:'केवल Admin रील हटा सकता है।'});
+      try { await pool.query('DELETE FROM reels WHERE id=$1',[deleteReel[1]]); return json(res,200,{success:true}); }
+      catch(e) { return json(res,500,{error:'रील हटाई नहीं जा सकी।'}); }
     }
-
 
     // ── API: Get Instagram Stories ──
     if (pathname === '/api/instagram-stories') {
