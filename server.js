@@ -608,6 +608,31 @@ async function authRoute(req,res,path){
   return json(res,404,{error:'Not found'});
 }
 
+async function getInstagramThumbnail(videoUrl) {
+  try {
+    const parsed = new URL(videoUrl);
+    if (!['instagram.com', 'www.instagram.com'].includes(parsed.hostname) ||
+        !/^\/(reel|p)\/[A-Za-z0-9_-]+/.test(parsed.pathname)) return null;
+    const response = await fetch(parsed.href, {
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; News5India/1.0)', 'Accept': 'text/html' },
+      signal: AbortSignal.timeout(8000)
+    });
+    if (!response.ok) return null;
+    const finalUrl = new URL(response.url);
+    if (!['instagram.com', 'www.instagram.com'].includes(finalUrl.hostname)) return null;
+    const html = await response.text();
+    const tags = html.match(/<meta\\b[^>]*>/gi) || [];
+    for (const tag of tags) {
+      if (!/property\\s*=\\s*["']og:image["']/i.test(tag) && !/name\\s*=\\s*["']twitter:image["']/i.test(tag)) continue;
+      const match = tag.match(/content\\s*=\\s*["']([^"']+)["']/i);
+      if (match && /^https:\\/\\//i.test(match[1])) return match[1].replace(/&amp;/g, '&').replace(/&#038;/g, '&');
+    }
+  } catch (e) {
+    console.warn('Instagram thumbnail auto-detect unavailable:', e.message);
+  }
+  return null;
+}
+
 function startServer(portToTry) {
   const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -615,7 +640,7 @@ function startServer(portToTry) {
 
     if (pathname.startsWith('/api/auth/')) return authRoute(req,res,pathname);
     if (pathname === '/api/reels' && req.method === 'GET') {
-      try { const q=await pool.query('SELECT id,title,description,video_url,thumbnail_url,category,created_at FROM reels ORDER BY created_at DESC LIMIT 60'); return json(res,200,{reels:q.rows}); }
+      try { const q=await pool.query('SELECT id,title,description,video_url,thumbnail_url,category,created_at FROM reels ORDER BY created_at DESC'); return json(res,200,{reels:q.rows}); }
       catch(e) { return json(res,500,{error:'रील्स लोड नहीं हो पाईं।'}); }
     }
     if (pathname === '/api/reels' && req.method === 'POST') {
@@ -625,7 +650,8 @@ function startServer(portToTry) {
         const x=await readBody(req),title=String(x.title||'').trim(),description=String(x.description||'').trim(),video=String(x.videoUrl||'').trim(),thumb=String(x.thumbnailUrl||'').trim(),category=String(x.category||'Other').slice(0,80);
         const valid=v=>{try{return ['http:','https:'].includes(new URL(v).protocol);}catch{return false;}};
         if(!title||title.length>180||!description||description.length>3000||!valid(video)||(thumb&&!valid(thumb))) return json(res,400,{error:'Title, description और सही video URL जरूरी हैं।'});
-        const q=await pool.query('INSERT INTO reels(title,description,video_url,thumbnail_url,category,created_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,title,description,video_url,thumbnail_url,category,created_at',[title,description,video,thumb||null,category,user.id]);
+        const finalThumb = thumb || await getInstagramThumbnail(video);
+        const q=await pool.query('INSERT INTO reels(title,description,video_url,thumbnail_url,category,created_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING id,title,description,video_url,thumbnail_url,category,created_at',[title,description,video,finalThumb||null,category,user.id]);
         return json(res,201,{success:true,reel:q.rows[0]});
       } catch(e) { console.error('Reel publish:',e.message); return json(res,400,{error:'रील पब्लिश नहीं हो पाई।'}); }
     }
