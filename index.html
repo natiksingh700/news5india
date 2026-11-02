@@ -802,7 +802,22 @@
   </div>
   <button type="button" id="n5LogoutBtn" class="n5-logout-btn" hidden>लॉगआउट</button>
   <section class="n5-admin-panel container" id="n5AdminPanel" hidden>
-    <h2>🔒 Admin Reel Studio</h2>
+    <h2>🔒 News5India Admin Panel</h2>
+    <section class="n5-ad-manager" aria-labelledby="n5AdHeading">
+      <h3 id="n5AdHeading">📢 Sticky Sidebar Advertisement</h3>
+      <p>यह विज्ञापन वेबसाइट के दाईं तरफ scroll करते समय sticky दिखाई देगा। नया विज्ञापन अपलोड करने पर पुराना active विज्ञापन replace हो जाएगा।</p>
+      <form id="n5AdForm" class="n5-reel-form">
+        <label for="n5AdTitle">विज्ञापन / ब्रांड का नाम *</label><input id="n5AdTitle" required maxlength="140" placeholder="जैसे: XYZ Showroom का ऑफर">
+        <label for="n5AdSponsor">Advertiser / Sponsor का नाम</label><input id="n5AdSponsor" maxlength="100" placeholder="जैसे: XYZ Motors">
+        <label for="n5AdImage">विज्ञापन की फोटो अपलोड करें * (PNG, JPG, WEBP • अधिकतम 2.5 MB)</label><input id="n5AdImage" type="file" accept="image/png,image/jpeg,image/webp" required>
+        <label for="n5AdLink">Click करने पर खुलने वाला URL (वैकल्पिक)</label><input id="n5AdLink" type="url" placeholder="https://example.com">
+        <button type="submit" id="n5AdPublish" class="n5-reel-publish">📢 विज्ञापन पब्लिश करें</button>
+        <p id="n5AdMessage" class="n5-auth-message" aria-live="polite"></p>
+      </form>
+      <div id="n5AdCurrent" class="n5-ad-current">Active विज्ञापन लोड हो रहा है...</div>
+    </section>
+    <hr class="n5-admin-divider">
+    <h3>🎬 Admin Reel Studio</h3>
     <form id="n5ReelForm" class="n5-reel-form">
       <label for="n5ReelTitle">रील का टाइटल *</label><input id="n5ReelTitle" required maxlength="180">
       <label for="n5ReelCategory">कैटेगरी</label><select id="n5ReelCategory"><option>Breaking News</option><option>Mathura News</option><option>Uttar Pradesh</option><option>Politics</option><option>Crime</option><option>Sports</option><option>Entertainment</option><option>Ground Report</option><option>Other</option></select>
