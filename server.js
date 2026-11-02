@@ -713,11 +713,82 @@ async function getInstagramThumbnail(videoUrl) {
   return null;
 }
 
+
+function escapeEpaperHtml(value) {
+  return String(value == null ? '' : value).replace(/[&<>"']/g, ch => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[ch]);
+}
+
+function buildEpaperHtml(language = 'hi') {
+  const file = language === 'en' ? EN_DATA_FILE : DATA_FILE;
+  let payload = { articles: [], lastUpdated: null };
+  try {
+    if (fs.existsSync(file)) payload = JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch (err) {
+    console.error('[E-Paper] Could not read news edition:', err.message);
+  }
+  const now = new Date();
+  const today = new Intl.DateTimeFormat(language === 'en' ? 'en-IN' : 'hi-IN', {
+    day:'numeric', month:'long', year:'numeric', timeZone:'Asia/Kolkata'
+  }).format(now);
+  const dateSlug = new Intl.DateTimeFormat('en-CA', {
+    timeZone:'Asia/Kolkata', year:'numeric', month:'2-digit', day:'2-digit'
+  }).format(now);
+  const isFresh = payload.lastUpdated && Date.now() - Date.parse(payload.lastUpdated) <= 24 * 60 * 60 * 1000;
+  const articles = isFresh && Array.isArray(payload.articles) ? payload.articles.slice(0, 30) : [];
+  const text = language === 'en';
+  const title = text ? 'NEWS 5 INDIA — Daily E-Paper' : 'NEWS 5 INDIA — दैनिक ई-पेपर';
+  const esc = escapeEpaperHtml;
+  const lead = articles[0];
+  const groups = new Map();
+  for (const item of articles.slice(1)) {
+    const category = item.category || (text ? 'News' : 'समाचार');
+    if (!groups.has(category)) groups.set(category, []);
+    groups.get(category).push(item);
+  }
+  const articleCard = (item, index, featured = false) => {
+    const image = item.image && /^https:\/\//i.test(item.image)
+      ? '<img src="' + esc(item.image) + '" alt="" class="story-image">'
+      : '';
+    const source = item.source ? '<span class="source">' + esc(item.source) + '</span>' : '';
+    const excerpt = item.excerpt && item.excerpt !== item.title ? item.excerpt : '';
+    const link = item.articleUrl && /^https:\/\//i.test(item.articleUrl)
+      ? '<a class="source-link" href="' + esc(item.articleUrl) + '">' + (text ? 'Read source report' : 'मूल खबर पढ़ें') + ' ↗</a>'
+      : '';
+    return '<article class="story ' + (featured ? 'featured' : '') + '">' +
+      (featured ? image : '') +
+      '<div class="story-kicker">' + esc(item.category || '') + (item.stateName ? ' · ' + esc(item.stateName) : '') + '</div>' +
+      '<h2>' + esc(item.title) + '</h2>' +
+      (excerpt ? '<p>' + esc(excerpt) + '</p>' : '') +
+      '<div class="story-meta">' + source + '<span>' + esc(item.date || '') + '</span></div>' + link +
+      '</article>';
+  };
+  const sections = Array.from(groups.entries()).map(([category, items]) =>
+    '<section class="desk"><h2 class="desk-title">' + esc(category) + '</h2><div class="desk-grid">' +
+    items.map((item, index) => articleCard(item, index)).join('') + '</div></section>'
+  ).join('');
+  const noNews = '<div class="no-news">' + (text
+    ? 'No verified fresh headlines are available for this edition yet. Please check again after the next news update.'
+    : 'इस समय सत्यापित ताज़ा खबरें उपलब्ध नहीं हैं। अगली न्यूज़ अपडेट के बाद दोबारा देखें।') + '</div>';
+  return '<!doctype html><html lang="' + (text ? 'en' : 'hi') + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + ' — ' + dateSlug + '</title><style>' +
+  '*{box-sizing:border-box}body{margin:0;background:#e9edf2;color:#171717;font-family:Georgia,"Noto Serif Devanagari","Nirmala UI",serif}.toolbar{position:sticky;top:0;z-index:5;display:flex;justify-content:center;gap:12px;padding:12px;background:#171d29}.toolbar button{border:0;border-radius:6px;padding:11px 18px;font:700 14px Arial,sans-serif;cursor:pointer}.print{background:#c8102e;color:white}.back{background:#fff;color:#171d29}.paper{width:min(1100px,calc(100% - 28px));margin:22px auto;background:#fff;padding:32px 38px;box-shadow:0 8px 35px #18202d18}.masthead{text-align:center;border-bottom:4px double #171717;padding-bottom:15px}.brand{font:900 42px Arial,sans-serif;letter-spacing:1px;color:#bd1424}.tagline{font:700 12px Arial,sans-serif;letter-spacing:2px;margin-top:5px}.edition{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #222;border-bottom:1px solid #222;padding:8px 0;margin-top:14px;font:700 12px Arial,sans-serif}.front-label{text-align:center;font:900 12px Arial,sans-serif;letter-spacing:2px;color:#bd1424;margin:18px 0 10px}.lead{display:grid;grid-template-columns:1.05fr .95fr;gap:22px;padding-bottom:18px;border-bottom:3px solid #171717}.lead .story-image{width:100%;height:265px;object-fit:cover}.story-kicker{font:800 11px Arial,sans-serif;color:#bd1424;text-transform:uppercase;margin:5px 0}.story h2{font-size:20px;line-height:1.28;margin:5px 0 8px}.lead h2{font-size:30px;line-height:1.16}.story p{font-size:13px;line-height:1.55;margin:6px 0}.story-meta{display:flex;justify-content:space-between;gap:8px;font:11px Arial,sans-serif;color:#666;margin-top:9px}.source{font-weight:700}.source-link{display:inline-block;margin-top:8px;font:700 11px Arial,sans-serif;color:#bd1424;text-decoration:none}.desk{margin-top:20px;break-inside:avoid}.desk-title{font:900 18px Arial,sans-serif;border-bottom:2px solid #bd1424;padding:0 0 7px;margin:0 0 12px}.desk-grid{columns:3;column-gap:22px}.desk .story{display:inline-block;width:100%;break-inside:avoid;border-bottom:1px solid #bbb;padding:0 0 12px;margin:0 0 12px}.desk .story h2{font-size:16px}.desk .story p{font-size:12px}.no-news{padding:45px 20px;text-align:center;border:1px dashed #aaa;font:16px Arial,sans-serif;margin-top:20px}.footer{text-align:center;border-top:3px double #171717;padding-top:10px;margin-top:25px;font:11px Arial,sans-serif;color:#555}.notice{text-align:center;font:11px Arial,sans-serif;color:#666;margin:12px 0}.toolbar-note{color:#fff;font:12px Arial,sans-serif;align-self:center}@page{size:A3 portrait;margin:12mm}@media print{body{background:#fff}.toolbar{display:none}.paper{width:100%;margin:0;padding:0;box-shadow:none}.lead,.desk,.story{break-inside:avoid}.desk-grid{columns:3}.source-link{color:#333;text-decoration:underline}a{color:#111}}@media(max-width:700px){.paper{width:100%;margin:0;padding:18px}.brand{font-size:31px}.lead{grid-template-columns:1fr}.lead h2{font-size:25px}.lead .story-image{height:210px}.desk-grid{columns:2}.edition{font-size:10px}}' +
+  '</style></head><body><div class="toolbar"><button class="print" onclick="window.print()">⬇ ' + (text ? 'Download / Print PDF' : 'PDF डाउनलोड / प्रिंट करें') + '</button><button class="back" onclick="history.back()">' + (text ? 'Back to website' : 'वेबसाइट पर वापस जाएं') + '</button><span class="toolbar-note">' + (text ? 'Choose “Save as PDF” in the print window' : 'प्रिंट विंडो में “Save as PDF” चुनें') + '</span></div><main class="paper"><header class="masthead"><div class="brand">NEWS 5 INDIA</div><div class="tagline">' + (text ? 'EVERY STORY. EVERY SIDE.' : 'हर खबर, आपके साथ') + '</div><div class="edition"><span>' + (text ? 'DAILY NATIONAL EDITION' : 'दैनिक राष्ट्रीय संस्करण') + '</span><span>' + esc(today) + '</span><span>' + (text ? 'PRICE ₹5' : 'मूल्य ₹5') + '</span></div></header>' +
+  (articles.length ? '<div class="front-label">' + (text ? 'TODAY’S TOP STORY' : 'आज की सबसे बड़ी खबर') + '</div><section class="lead">' + articleCard(lead,0,true) + (articles[1] ? articleCard(articles[1],1) : '') + '</section>' + sections : noNews) +
+  '<div class="notice">' + (text ? 'Headlines and summaries are based on the linked publisher reports. Read original sources for full coverage.' : 'समाचारों के शीर्षक और संक्षेप संबंधित प्रकाशकों की रिपोर्ट पर आधारित हैं। विस्तृत जानकारी के लिए मूल स्रोत पढ़ें।') + '</div><footer class="footer">NEWS 5 INDIA MEDIA NETWORK · ' + esc(today) + ' · ' + (articles.length ? articles.length : 0) + ' ' + (text ? 'verified headlines' : 'सत्यापित सुर्खियां') + '</footer></main></body></html>';
+}
+
 function startServer(portToTry) {
   const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
 
+    if (pathname === '/epaper' && req.method === 'GET') {
+      const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
+      const documentHtml = buildEpaperHtml(language);
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(documentHtml);
+    }
     if (pathname === '/api/news' && req.method === 'GET') {
       const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
       const newsFile = language === 'en' ? EN_DATA_FILE : DATA_FILE;
