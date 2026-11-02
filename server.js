@@ -11,6 +11,7 @@ const { pool, initDB } = require('./db.js');
 let PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
 const ROOT = __dirname;
 const DATA_FILE = path.join(ROOT, 'data', 'live-news.json');
+const EN_DATA_FILE = path.join(ROOT, 'data', 'live-news-en.json');
 const INSTA_DATA_FILE = path.join(ROOT, 'data', 'instagram-stories.json');
 
 const MIME_TYPES = {
@@ -379,16 +380,44 @@ function formatHindiTime(pubDateStr) {
 }
 
 // ─── Main Engine: Fetches ALL categories, builds unified article list ─────────
+const ENGLISH_CATEGORY_NAMES = {
+  'देश':'National', 'विश्व':'World', 'मनोरंजन':'Entertainment', 'खेल':'Sports',
+  'बिज़नेस':'Business', 'टेक्नोलॉजी':'Technology', 'राज्य':'States',
+  'राजनीति':'Politics', 'फिल्में':'Movies', 'वेब सीरीज़ और OTT':'Web Series & OTT',
+  'ट्रेलर और टीज़र':'Trailers & Teasers', 'बॉक्स ऑफिस':'Box Office',
+  'टीवी और सेलिब्रिटी':'TV & Celebrities', 'AI और टेक्नोलॉजी':'AI & Technology',
+  'मोबाइल और गैजेट्स':'Mobiles & Gadgets', 'साइबर और डिजिटल':'Cyber & Digital',
+  'गेमिंग और ई-स्पोर्ट्स':'Gaming & Esports', 'ऑटो और EV':'Auto & EV',
+  'विज्ञान और अंतरिक्ष':'Science & Space', 'शिक्षा और परीक्षा':'Education',
+  'सरकारी नौकरी और भर्ती':'Government Jobs', 'स्टार्टअप और अर्थव्यवस्था':'Startups & Economy',
+  'स्वास्थ्य समाचार':'Health', 'मौसम और मानसून':'Weather', 'कृषि और किसान':'Agriculture',
+  'पर्यावरण':'Environment', 'मथुरा-वृंदावन':'Mathura-Vrindavan', 'आगरा':'Agra'
+};
+
+function feedsForLanguage(language) {
+  if (language !== 'en') return FEED_CONFIG;
+  return FEED_CONFIG.map(feed => ({
+    ...feed,
+    url: feed.url.replace(/hl=hi/g, 'hl=en-IN').replace(/ceid=IN:hi/g, 'ceid=IN:en'),
+    category: ENGLISH_CATEGORY_NAMES[feed.category] || feed.category,
+    stateName: feed.stateName === 'उत्तर प्रदेश' ? 'Uttar Pradesh' :
+      feed.stateName === 'दिल्ली NCR' ? 'Delhi NCR' : feed.stateName,
+    author: 'News5India News Desk'
+  }));
+}
+
 let updateCycle = 0;
-async function autoUpdateAllNews() {
+async function autoUpdateAllNews(language = 'hi') {
   updateCycle++;
   const allArticles = [];
   const seenTitles = new Set();
   const ts = Date.now();
 
-  console.log(`\n🔄 [Cycle #${updateCycle}] Fetching real news from ${FEED_CONFIG.length} feeds...`);
+  const activeFeeds = feedsForLanguage(language);
+  const targetDataFile = language === 'en' ? EN_DATA_FILE : DATA_FILE;
+  console.log(`\n🔄 [Cycle #${updateCycle}] Fetching ${language.toUpperCase()} news from ${activeFeeds.length} feeds...`);
 
-  for (const feed of FEED_CONFIG) {
+  for (const feed of activeFeeds) {
     try {
       const rawXml = await fetchRaw(feed.url);
       const parsedItems = parseXmlItems(rawXml, Math.max(feed.maxItems * 5, 20));
@@ -405,13 +434,13 @@ async function autoUpdateAllNews() {
         const cleanContent = `<p><strong>स्रोत से प्राप्त समाचार-संक्षेप:</strong> ${item.title}</p>${cleanExcerpt !== item.title ? '<p>' + cleanExcerpt + '</p>' : ''}<p>यह संक्षेप RSS में उपलब्ध जानकारी पर आधारित है। पूरी रिपोर्ट के लिए मूल स्रोत देखें।</p>`;
 
         const article = {
-          id: `live-${feed.categorySlug}-${ts}-${allArticles.length}`,
+          id: `live-${language}-${feed.categorySlug}-${ts}-${allArticles.length}`,
           title: item.title,
           excerpt: cleanExcerpt,
           category: feed.category,
           categorySlug: feed.categorySlug,
           author: feed.author + (item.source ? ` (${item.source})` : ''),
-          date: formatHindiTime(item.pubDate),
+          date: language === 'en' ? new Date(item.pubDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' }) : formatHindiTime(item.pubDate),
           publishedAt: item.pubDate || null,
           source: item.source,
           articleUrl: item.articleUrl,
@@ -444,7 +473,7 @@ async function autoUpdateAllNews() {
       totalArticles: allArticles.length,
       articles: allArticles
     };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+    fs.writeFileSync(targetDataFile, JSON.stringify(payload, null, 2), 'utf-8');
     console.log(`🤖 [News5Indiaa AI Engine] Total ${allArticles.length} REAL news articles saved! (Cycle #${updateCycle})\n`);
 
     // ── Save/Upsert Articles to Neon PostgreSQL Database ──
@@ -474,7 +503,7 @@ async function autoUpdateAllNews() {
   } else {
     // Clear stale headlines when no fresh, allowlisted articles pass the checks.
     const emptyPayload = { lastUpdated: new Date().toISOString(), totalArticles: 0, articles: [] };
-    fs.writeFileSync(DATA_FILE, JSON.stringify(emptyPayload, null, 2), 'utf-8');
+    fs.writeFileSync(targetDataFile, JSON.stringify(emptyPayload, null, 2), 'utf-8');
     console.log(`⚠️ [Cycle #${updateCycle}] No trusted, recent articles passed the checks.\n`);
   }
 }
@@ -508,8 +537,10 @@ async function pollInstagramLive() {
 }
 
 // ─── Start Engine: Immediately + Every 5 minutes ─────────────────────────────
-autoUpdateAllNews();
-setInterval(autoUpdateAllNews, 5 * 60 * 1000);
+autoUpdateAllNews('hi');
+autoUpdateAllNews('en');
+setInterval(() => autoUpdateAllNews('hi'), 5 * 60 * 1000);
+setInterval(() => autoUpdateAllNews('en'), 5 * 60 * 1000);
 pollInstagramLive();
 setInterval(pollInstagramLive, 5 * 60 * 1000);
 
