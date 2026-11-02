@@ -484,7 +484,8 @@ async function authRoute(req,res,path){
 \nfunction startServer(portToTry) {
   const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    const pathname = parsedUrl.pathname;\n
+    const pathname = parsedUrl.pathname;
+
     if (pathname.startsWith('/api/auth/')) return authRoute(req,res,pathname);
     if (pathname === '/api/reels' && req.method === 'GET') {
       try { const q=await pool.query('SELECT id,title,description,video_url,thumbnail_url,category,created_at FROM reels ORDER BY created_at DESC LIMIT 60'); return json(res,200,{reels:q.rows}); }
@@ -549,19 +550,7 @@ async function authRoute(req,res,path){
       });
 
 
-      if (pathname === '/api/add-insta-story') {
-        const session=getSession(req);
-        if(!session || session.role!=='admin') return sendJson(res,403,{success:false,error:'केवल Admin स्टोरी जोड़ सकता है।'});
-      }
-      if (pathname === '/api/instagram-webhook' && req.method === 'POST') {
-        const supplied=(req.headers.authorization||'').replace(/^Bearer\s+/i,'');
-        const secret=process.env.WEBHOOK_SECRET;
-        if(!secret || !supplied || supplied.length!==secret.length || !crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(secret))) {
-          return sendJson(res,401,{success:false,error:'Webhook authentication required.'});
-        }
-      }
-      if (pathname === '/api/instagram-webhook' && req.method !== 'POST' && req.method !== 'GET') return sendJson(res,405,{error:'Method not allowed'});
-\n      if (req.method === 'OPTIONS') {
+      if (req.method === 'OPTIONS') {
         return res.end();
       }
 
@@ -569,7 +558,9 @@ async function authRoute(req,res,path){
       if (req.method === 'GET') {
         const hubMode = parsedUrl.searchParams.get('hub.mode');
         const hubChallenge = parsedUrl.searchParams.get('hub.challenge');
-        const expectedVerify=process.env.META_WEBHOOK_VERIFY_TOKEN;\n        const suppliedVerify=parsedUrl.searchParams.get('hub.verify_token');\n        if (hubMode === 'subscribe' && hubChallenge && expectedVerify && suppliedVerify===expectedVerify) {
+        const expectedVerify=process.env.META_WEBHOOK_VERIFY_TOKEN;
+        const suppliedVerify=parsedUrl.searchParams.get('hub.verify_token');
+        if (hubMode === 'subscribe' && hubChallenge && expectedVerify && suppliedVerify===expectedVerify) {
           res.writeHead(200, { 'Content-Type': 'text/plain' });
           console.log('✅ [Instagram Webhook] Meta Webhook verified with challenge:', hubChallenge);
           return res.end(hubChallenge);
