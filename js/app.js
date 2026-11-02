@@ -14,6 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
     searchResults: null,
     searchLoading: false,
     searchTimer: null,
+    visibleArticleCount: 12,
+    feedKey: "",
+    feedObserver: null,
     tickerIndex: 0,
     isTickerPlaying: true,
     tickerInterval: null,
@@ -704,6 +707,11 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderNewsFeed() {
     if (!elements.newsCardsGrid) return;
     const filtered = getFilteredArticles();
+    const nextFeedKey = [state.currentCategory, state.currentState, state.searchQuery, state.searchResults ? state.searchResults.length : "local", state.currentLanguage].join("|");
+    if (state.feedKey !== nextFeedKey) {
+      state.feedKey = nextFeedKey;
+      state.visibleArticleCount = 12;
+    }
     renderCategoryShelves();
 
     if (elements.filterHeader) {
@@ -737,7 +745,8 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    elements.newsCardsGrid.innerHTML = filtered.map(item => `
+    const visibleArticles = filtered.slice(0, state.visibleArticleCount);
+    elements.newsCardsGrid.innerHTML = visibleArticles.map(item => `
       <article class="news-card" data-article-id="${item.id}">
         <div class="news-card-img-wrap">
           <img src="${getArticleImage(item)}" data-news-fallback alt="${item.title}" class="news-card-img" loading="lazy" />
@@ -766,6 +775,34 @@ document.addEventListener("DOMContentLoaded", () => {
         if (found) openArticleModal(found);
       });
     });
+
+    const remaining = filtered.length - visibleArticles.length;
+    const loadMoreMarkup = remaining > 0
+      ? `<div class="news-load-more-wrap" id="newsLoadMoreWrap"><div class="news-load-more-sentinel" id="newsLoadMoreSentinel" aria-hidden="true"></div><button type="button" class="news-load-more-btn" id="newsLoadMoreBtn">और खबरें देखें <span>↓</span></button><small>${remaining} और खबरें उपलब्ध</small></div>`
+      : `<div class="news-end-note" id="newsEndNote">अभी की सभी उपलब्ध खबरें दिखाई जा चुकी हैं। नई खबरें आते ही यहाँ जुड़ेंगी।</div>`;
+    elements.newsCardsGrid.insertAdjacentHTML("beforeend", loadMoreMarkup);
+
+    const loadButton = document.getElementById("newsLoadMoreBtn");
+    if (loadButton) loadButton.addEventListener("click", loadMoreArticles);
+    if (state.feedObserver) state.feedObserver.disconnect();
+    const sentinel = document.getElementById("newsLoadMoreSentinel");
+    if (sentinel && "IntersectionObserver" in window) {
+      state.feedObserver = new IntersectionObserver(entries => {
+        if (entries.some(entry => entry.isIntersecting)) loadMoreArticles();
+      }, { root: null, rootMargin: "700px 0px", threshold: 0 });
+      state.feedObserver.observe(sentinel);
+    }
+  }
+
+  function loadMoreArticles() {
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== "undefined" ? NEWS_DATA : null);
+    const total = state.searchQuery && state.searchResults
+      ? state.searchResults.length
+      : getFilteredArticles().length;
+    if (state.visibleArticleCount >= total) return;
+    if (state.feedObserver) state.feedObserver.disconnect();
+    state.visibleArticleCount = Math.min(state.visibleArticleCount + 12, total);
+    renderNewsFeed();
   }
 
   function renderCategoryShelves() {
