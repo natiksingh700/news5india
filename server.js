@@ -653,7 +653,7 @@ function startServer(portToTry) {
         return json(res,200,{reels:q.rows});
       } catch(e) { return json(res,500,{error:'सेव की गई रील्स लोड नहीं हो पाईं।'}); }
     }
-    const saveReel=pathname.match(/^\\/api\\/reels\\/(\\d+)\\/saved$/);
+    const saveReel=pathname.match(/^\/api\/reels\/(\d+)\/saved$/);
     if(saveReel && (req.method==='POST'||req.method==='DELETE')) {
       const user=currentSession(req);
       if(!user) return json(res,401,{error:'रील सेव करने के लिए पहले लॉगिन करें।'});
