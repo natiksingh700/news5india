@@ -643,6 +643,31 @@ function startServer(portToTry) {
       try { const q=await pool.query('SELECT id,title,description,video_url,thumbnail_url,category,created_at FROM reels ORDER BY created_at DESC'); return json(res,200,{reels:q.rows}); }
       catch(e) { return json(res,500,{error:'रील्स लोड नहीं हो पाईं।'}); }
     }
+    if (pathname === '/api/reels/saved' && req.method === 'GET') {
+      const user=currentSession(req);
+      if(!user) return json(res,401,{error:'रील सेव करने के लिए पहले लॉगिन करें।'});
+      try {
+        const q=await pool.query(`SELECT r.id,r.title,r.description,r.video_url,r.thumbnail_url,r.category,r.created_at
+          FROM saved_reels s JOIN reels r ON r.id=s.reel_id
+          WHERE s.user_id=$1 ORDER BY s.created_at DESC`,[user.id]);
+        return json(res,200,{reels:q.rows});
+      } catch(e) { return json(res,500,{error:'सेव की गई रील्स लोड नहीं हो पाईं।'}); }
+    }
+    const saveReel=pathname.match(/^\\/api\\/reels\\/(\\d+)\\/saved$/);
+    if(saveReel && (req.method==='POST'||req.method==='DELETE')) {
+      const user=currentSession(req);
+      if(!user) return json(res,401,{error:'रील सेव करने के लिए पहले लॉगिन करें।'});
+      try {
+        if(req.method==='POST') {
+          const exists=await pool.query('SELECT id FROM reels WHERE id=$1',[saveReel[1]]);
+          if(!exists.rowCount) return json(res,404,{error:'यह रील उपलब्ध नहीं है।'});
+          await pool.query('INSERT INTO saved_reels(user_id,reel_id) VALUES($1,$2) ON CONFLICT DO NOTHING',[user.id,saveReel[1]]);
+          return json(res,200,{success:true,saved:true});
+        }
+        await pool.query('DELETE FROM saved_reels WHERE user_id=$1 AND reel_id=$2',[user.id,saveReel[1]]);
+        return json(res,200,{success:true,saved:false});
+      } catch(e) { return json(res,500,{error:'रील की सेव स्थिति अपडेट नहीं हो पाई।'}); }
+    }
     if (pathname === '/api/reels' && req.method === 'POST') {
       const user=currentSession(req);
       if(!user || user.role!=='admin') return json(res,403,{error:'यह सुविधा केवल Admin के लिए है।'});
