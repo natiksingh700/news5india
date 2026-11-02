@@ -89,10 +89,10 @@ async function initDB() {
         created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
       );
     `);
-    await client.query(`
-      CREATE UNIQUE INDEX IF NOT EXISTS advertisements_single_active_idx
-      ON advertisements ((is_active)) WHERE is_active = TRUE
-    `);
+    // Upgrade existing ads table to three independent slots, preserving existing slot-1 ad.
+    await client.query(`ALTER TABLE advertisements ADD COLUMN IF NOT EXISTS slot_no SMALLINT NOT NULL DEFAULT 1`);
+    await client.query(`DROP INDEX IF EXISTS advertisements_single_active_idx`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS advertisements_one_active_per_slot_idx ON advertisements (slot_no) WHERE is_active = TRUE`);
 
     console.log('✅ [Neon PostgreSQL] Database tables initialized successfully!');
   } catch (err) {
