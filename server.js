@@ -307,40 +307,101 @@ function isGenericNewsImageUrl(value) {
   } catch { return true; }
 }
 
+async function fetchPublisherPage(articleUrl, timeoutMs = 7000, redirects = 0) {
+  if (redirects > 6) throw new Error('Too many publisher redirects');
+  const target = new URL(articleUrl);
+  if (target.protocol !== 'https:') throw new Error('Only HTTPS publisher pages are allowed');
+  return new Promise((resolve, reject) => {
+    const request = https.get(target, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; News5IndiaBot/1.0; +https://news5india.onrender.com)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'hi-IN,hi;q=0.9,en;q=0.8'
+      }
+    }, response => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        response.resume();
+        const next = new URL(response.headers.location, target).href;
+        resolve(fetchPublisherPage(next, timeoutMs, redirects + 1));
+        return;
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        response.resume();
+        reject(new Error('Publisher returned HTTP ' + response.statusCode));
+        return;
+      }
+      let html = '';
+      response.setEncoding('utf8');
+      response.on('data', chunk => {
+        html += chunk;
+        if (html.length > 2_500_000) request.destroy(new Error('Publisher page too large'));
+      });
+      response.on('end', () => resolve({ html, finalUrl: target.href }));
+      response.on('error', reject);
+    });
+    request.setTimeout(timeoutMs, () => request.destroy(new Error('Publisher image timeout')));
+    request.on('error', reject);
+  });
+}
+
+function extractPublisherImage(html, pageUrl) {
+  const candidates = [];
+  const metaTags = html.match(/<meta\b[^>]*>/gi) || [];
+  for (const tag of metaTags) {
+    const property = (tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+    const content = (tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+    if (/^(og:image(?::secure_url)?|twitter:image(?::src)?)$/i.test(property) && content) candidates.push(content);
+  }
+
+  const linkTags = html.match(/<link\b[^>]*>/gi) || [];
+  for (const tag of linkTags) {
+    const rel = (tag.match(/\brel\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+    const href = (tag.match(/\bhref\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+    if (/image_src/i.test(rel) && href) candidates.push(href);
+  }
+
+  const jsonLdBlocks = html.match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
+  const collectJsonImages = value => {
+    if (!value) return;
+    if (typeof value === 'string') candidates.push(value);
+    else if (Array.isArray(value)) value.forEach(collectJsonImages);
+    else if (typeof value === 'object') {
+      if (value.url) collectJsonImages(value.url);
+      if (value.contentUrl) collectJsonImages(value.contentUrl);
+      if (value.image) collectJsonImages(value.image);
+      if (value.thumbnailUrl) collectJsonImages(value.thumbnailUrl);
+      if (value['@graph']) collectJsonImages(value['@graph']);
+    }
+  };
+  for (const block of jsonLdBlocks) {
+    const body = block.replace(/^<script[^>]*>/i, '').replace(/<\/script>$/i, '');
+    try { collectJsonImages(JSON.parse(body)); } catch {}
+  }
+
+  const articleImages = html.match(/<(?:article|figure)\b[^>]*>[\s\S]{0,30000}?<img\b[^>]*>/gi) || [];
+  for (const tag of articleImages) {
+    const src = (tag.match(/\b(?:src|data-src|data-lazy-src|data-original)\s*=\s*["']([^"']+)["']/i) || [])[1];
+    if (src) candidates.push(src);
+    const srcset = (tag.match(/\bsrcset\s*=\s*["']([^"']+)["']/i) || [])[1];
+    if (srcset) candidates.push(srcset.split(',').pop().trim().split(/\s+/)[0]);
+  }
+
+  for (let candidate of candidates) {
+    candidate = cleanHtmlEntities(String(candidate).trim()).replace(/&amp;/g, '&');
+    try { candidate = new URL(candidate, pageUrl).href; } catch { continue; }
+    if (!isGenericNewsImageUrl(candidate) && !/\.(?:svg|gif)(?:[?#]|$)/i.test(candidate)) return candidate;
+  }
+  return '';
+}
+
 async function getPublisherImage(articleUrl) {
   if (!articleUrl || !/^https:\/\//i.test(articleUrl)) return '';
   if (publisherImageCache.has(articleUrl)) return publisherImageCache.get(articleUrl);
   try {
-    const html = await fetchRaw(articleUrl, 6500);
-    const candidates = [];
-    const metaTags = html.match(/<meta\b[^>]*>/gi) || [];
-    for (const tag of metaTags) {
-      const property = (tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
-      const content = (tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
-      if (/^(og:image(?::secure_url)?|twitter:image(?::src)?)$/i.test(property) && content) candidates.push(content);
-    }
-    const jsonLd = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
-    for (const block of jsonLd) {
-      const body = block.replace(/^<script[^>]*>/i, '').replace(/<\/script>$/i, '');
-      const matches = body.match(/["']image["']\s*:\s*(?:\[\s*)?["']([^"']+)["']/gi) || [];
-      for (const match of matches) {
-        const value = match.match(/["']([^"']+)["']\s*$/);
-        if (value) candidates.push(value[1]);
-      }
-    }
-    const firstArticleImage = html.match(/<(?:article|figure)[^>]*>[\s\S]{0,18000}?<img\b[^>]*(?:src|data-src|data-original)=["']([^"']+)["']/i);
-    if (firstArticleImage) candidates.push(firstArticleImage[1]);
-    let image = '';
-    for (let candidate of candidates) {
-      candidate = cleanHtmlEntities(String(candidate).trim()).replace(/&amp;/g, '&');
-      try { candidate = new URL(candidate, articleUrl).href; } catch { continue; }
-      if (!isGenericNewsImageUrl(candidate) && !/\.(?:svg|gif)(?:[?#]|$)/i.test(candidate)) {
-        image = candidate;
-        break;
-      }
-    }
+    const page = await fetchPublisherPage(articleUrl, 7000);
+    const image = extractPublisherImage(page.html, page.finalUrl);
     publisherImageCache.set(articleUrl, image);
-    if (publisherImageCache.size > 900) publisherImageCache.delete(publisherImageCache.keys().next().value);
+    if (publisherImageCache.size > 1400) publisherImageCache.delete(publisherImageCache.keys().next().value);
     return image;
   } catch {
     publisherImageCache.set(articleUrl, '');
@@ -348,7 +409,7 @@ async function getPublisherImage(articleUrl) {
   }
 }
 
-async function enrichPublisherImages(articles, maxItems = 120, concurrency = 10) {
+async function enrichPublisherImages(articles, maxItems = 220, concurrency = 14) {
   const targets = articles.filter(item => item.articleUrl && (
     item.imageSource === 'fallback' || !item.image || isGenericNewsImageUrl(item.image)
   )).slice(0, maxItems);
@@ -368,7 +429,6 @@ async function enrichPublisherImages(articles, maxItems = 120, concurrency = 10)
   });
   await Promise.all(workers);
 
-  // Never show the same generic publisher thumbnail on a whole page.
   const seen = new Set();
   for (const item of articles) {
     if (!item.image || isGenericNewsImageUrl(item.image)) {
@@ -454,41 +514,55 @@ function stripAllHtml(str) {
   return decoded;
 }
 
+function extractRssImage(itemXml) {
+  const candidates = [];
+  const mediaTags = itemXml.match(/<(?:media:content|media:thumbnail|enclosure)\b[^>]*>/gi) || [];
+  for (const tag of mediaTags) {
+    const url = (tag.match(/\burl\s*=\s*["']([^"']+)["']/i) || [])[1];
+    const type = (tag.match(/\btype\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+    if (url && (!type || /^image\//i.test(type))) candidates.push(url);
+  }
+  const htmlImageTags = itemXml.match(/<img\b[^>]*>/gi) || [];
+  for (const tag of htmlImageTags) {
+    for (const attr of ['src','data-src','data-original','data-lazy-src','srcset']) {
+      const value = (tag.match(new RegExp('\\b' + attr + '\\s*=\\s*["\\']([^"\\']+)["\\']','i')) || [])[1];
+      if (value) candidates.push(attr === 'srcset' ? value.split(',')[0].trim().split(/\s+/)[0] : value);
+    }
+  }
+  for (let candidate of candidates) {
+    candidate = cleanHtmlEntities(String(candidate).trim()).replace(/&amp;/g, '&');
+    if (/^https?:\/\//i.test(candidate) && !isGenericNewsImageUrl(candidate)) return candidate;
+  }
+  return '';
+}
+
 function parseXmlItems(xml, maxItems) {
   const items = [];
-  const itemMatches = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
+  const itemMatches = xml.match(/<item\b[\s\S]*?<\/item>/gi) || [];
   for (const itemXml of itemMatches.slice(0, maxItems || 6)) {
-    const titleMatch = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || itemXml.match(/<title>(.*?)<\/title>/);
-    const descMatch = itemXml.match(/<description>([\s\S]*?)<\/description>/);
-    const dateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/);
-    const sourceMatch = itemXml.match(/<source[^>]*>(.*?)<\/source>/);
-    const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
-    const imageMatch = itemXml.match(/<(?:media:content|media:thumbnail|enclosure)[^>]*url=["']([^"']+)["'][^>]*>/i)
-      || itemXml.match(/<img[^>]+src=["']([^"']+)["']/i);
-
+    const titleMatch = itemXml.match(/<title><!\[CDATA\[([\s\S]*?)\]\]><\/title>/i) || itemXml.match(/<title>([\s\S]*?)<\/title>/i);
+    const descMatch = itemXml.match(/<description>([\s\S]*?)<\/description>/i);
+    const dateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/i);
+    const sourceMatch = itemXml.match(/<source[^>]*>([\s\S]*?)<\/source>/i);
+    const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/i);
     if (titleMatch && titleMatch[1]) {
       const rawTitle = stripAllHtml(titleMatch[1]);
-      // Remove the " - Source" suffix Google News adds
       const dashIdx = rawTitle.lastIndexOf(' - ');
       const title = dashIdx > 20 ? rawTitle.substring(0, dashIdx).trim() : rawTitle;
       const source = sourceMatch ? stripAllHtml(sourceMatch[1]) : (dashIdx > 20 ? rawTitle.substring(dashIdx + 3).trim() : '');
-      
-      // Clean the description — strip ALL HTML, entities, and URLs
       let desc = '';
       if (descMatch && descMatch[1]) {
         desc = stripAllHtml(descMatch[1]);
-        // Remove duplicate source names that Google News adds in description
         if (desc.length < 10 || desc === title) desc = '';
         desc = desc.substring(0, 300);
       }
-
       items.push({
         title,
         source,
         description: desc,
-        pubDate: dateMatch ? dateMatch[1].trim() : '',
+        pubDate: dateMatch ? cleanHtmlEntities(dateMatch[1].trim()) : '',
         articleUrl: linkMatch ? cleanHtmlEntities(linkMatch[1].trim()) : '',
-        imageUrl: imageMatch && /^https:\/\//i.test(imageMatch[1]) ? cleanHtmlEntities(imageMatch[1]) : ''
+        imageUrl: extractRssImage(itemXml)
       });
     }
   }
@@ -628,7 +702,7 @@ async function runNewsUpdate(language = 'hi') {
   if (allArticles.length > 0) {
     // Put the newest RSS publication first so the homepage lead and ticker are current.
     allArticles.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-    await enrichPublisherImages(allArticles, 180, 12);
+    await enrichPublisherImages(allArticles, 240, 14);
     const payload = {
       lastUpdated: new Date().toISOString(),
       totalArticles: allArticles.length,
