@@ -39,6 +39,8 @@ const MIME_TYPES = {
 const EXTRA_FEEDS = [
   { query: '"upcoming movies" OR "release date" India Bollywood Hollywood', category: 'फिल्में', slug: 'movies', author: 'News5Indiaa फिल्म डेस्क', maxItems: 3 },
   { query: '"upcoming web series" OR OTT release date Netflix Prime Video JioHotstar India', category: 'वेब सीरीज़ और OTT', slug: 'ott', author: 'News5Indiaa OTT डेस्क', maxItems: 3 },
+  { query: 'Indian television serials daily soaps reality shows TV show latest updates', category: 'टीवी शो और सीरियल', slug: 'tv', author: 'News5Indiaa TV डेस्क', maxItems: 3 },
+  { query: 'streaming series season finale cast release date Netflix Prime Video JioHotstar India', category: 'वेब सीरीज़ और OTT', slug: 'ott', author: 'News5Indiaa OTT डेस्क', maxItems: 3 },
   { query: 'movie trailer teaser announcement India cinema', category: 'ट्रेलर और टीज़र', slug: 'trailers', author: 'News5Indiaa ट्रेलर डेस्क', maxItems: 2 },
   { query: 'Bollywood Hollywood box office collection film review', category: 'बॉक्स ऑफिस', slug: 'boxoffice', author: 'News5Indiaa सिनेमा डेस्क', maxItems: 2 },
   { query: 'television serial reality show celebrity entertainment India', category: 'टीवी और सेलिब्रिटी', slug: 'entertainment', author: 'News5Indiaa टीवी डेस्क', maxItems: 2 },
@@ -291,7 +293,7 @@ const FEED_CONFIG = [
 // ─── Fetch Utility (follows redirects) ────────────────────────────────────────
 function fetchRaw(url) {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Timeout')), 12000);
+    const timeout = setTimeout(() => reject(new Error('Timeout')), 9000);
     https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         clearTimeout(timeout);
@@ -366,6 +368,9 @@ function parseXmlItems(xml, maxItems) {
     const dateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/);
     const sourceMatch = itemXml.match(/<source[^>]*>(.*?)<\/source>/);
     const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
+    const imageMatch = itemXml.match(/<(?:media:content|media:thumbnail|enclosure)[^>]*url=["']([^"']+)["'][^>]*>/i)
+      || itemXml.match(/<img[^>]+src=["']([^"']+)["']/i);
+
     if (titleMatch && titleMatch[1]) {
       const rawTitle = stripAllHtml(titleMatch[1]);
       // Remove the " - Source" suffix Google News adds
@@ -387,7 +392,8 @@ function parseXmlItems(xml, maxItems) {
         source,
         description: desc,
         pubDate: dateMatch ? dateMatch[1].trim() : '',
-        articleUrl: linkMatch ? cleanHtmlEntities(linkMatch[1].trim()) : ''
+        articleUrl: linkMatch ? cleanHtmlEntities(linkMatch[1].trim()) : '',
+        imageUrl: imageMatch && /^https:\/\//i.test(imageMatch[1]) ? cleanHtmlEntities(imageMatch[1]) : ''
       });
     }
   }
@@ -414,7 +420,7 @@ function formatHindiTime(pubDateStr) {
 const ENGLISH_CATEGORY_NAMES = {
   'देश':'National', 'विश्व':'World', 'मनोरंजन':'Entertainment', 'खेल':'Sports',
   'बिज़नेस':'Business', 'टेक्नोलॉजी':'Technology', 'राज्य':'States',
-  'राजनीति':'Politics', 'फिल्में':'Movies', 'वेब सीरीज़ और OTT':'Web Series & OTT',
+  'राजनीति':'Politics', 'फिल्में':'Movies', 'वेब सीरीज़ और OTT':'Web Series & OTT', 'टीवी शो और सीरियल':'TV Shows & Serials',
   'ट्रेलर और टीज़र':'Trailers & Teasers', 'बॉक्स ऑफिस':'Box Office',
   'टीवी और सेलिब्रिटी':'TV & Celebrities', 'AI और टेक्नोलॉजी':'AI & Technology',
   'मोबाइल और गैजेट्स':'Mobiles & Gadgets', 'साइबर और डिजिटल':'Cyber & Digital',
@@ -449,7 +455,18 @@ function feedsForLanguage(language) {
 }
 
 let updateCycle = 0;
-async function autoUpdateAllNews(language = 'hi') {
+const newsRefreshInFlight = new Set();
+function autoUpdateAllNews(language = 'hi') {
+  if (newsRefreshInFlight.has(language)) {
+    console.log(`⏳ [News Engine] ${language} refresh already running; skipping overlapping cycle.`);
+    return Promise.resolve();
+  }
+  newsRefreshInFlight.add(language);
+  return runNewsUpdate(language)
+    .catch(err => console.error(`❌ [News Engine] ${language} refresh failed:`, err.message))
+    .finally(() => newsRefreshInFlight.delete(language));
+}
+async function runNewsUpdate(language = 'hi') {
   updateCycle++;
   const allArticles = [];
   const seenTitles = new Set();
@@ -460,8 +477,8 @@ async function autoUpdateAllNews(language = 'hi') {
   console.log(`\n🔄 [Cycle #${updateCycle}] Fetching ${language.toUpperCase()} news from ${activeFeeds.length} feeds...`);
 
   // Fetch feeds in small parallel batches so language refreshes finish promptly.
-  for (let batchStart = 0; batchStart < activeFeeds.length; batchStart += 6) {
-    const batch = activeFeeds.slice(batchStart, batchStart + 6);
+  for (let batchStart = 0; batchStart < activeFeeds.length; batchStart += 10) {
+    const batch = activeFeeds.slice(batchStart, batchStart + 10);
     await Promise.all(batch.map(async feed => {
     try {
       const rawXml = await fetchRaw(feed.url);
@@ -490,7 +507,7 @@ async function autoUpdateAllNews(language = 'hi') {
           source: item.source,
           articleUrl: item.articleUrl,
           readTime: language === 'en' ? '2 min' : '2 मिनट',
-          image: feed.images[i % feed.images.length],
+          image: item.imageUrl || feed.images[i % feed.images.length],
           views: "—",
           content: cleanContent
         };
@@ -547,10 +564,18 @@ async function autoUpdateAllNews(language = 'hi') {
       console.error('⚠️ [Neon DB] Articles sync warning:', dbErr.message);
     }
   } else {
-    // Clear stale headlines when no fresh, allowlisted articles pass the checks.
-    const emptyPayload = { lastUpdated: new Date().toISOString(), totalArticles: 0, articles: [] };
-    fs.writeFileSync(targetDataFile, JSON.stringify(emptyPayload, null, 2), 'utf-8');
-    console.log(`⚠️ [Cycle #${updateCycle}] No trusted, recent articles passed the checks.\n`);
+    // Keep a recent last-good edition during a temporary RSS outage, but never serve
+    // headlines older than 24 hours as if they were today's news.
+    let previous = null;
+    try { if (fs.existsSync(targetDataFile)) previous = JSON.parse(fs.readFileSync(targetDataFile, 'utf-8')); } catch {}
+    const previousAge = previous && Date.parse(previous.lastUpdated || '') ? Date.now() - Date.parse(previous.lastUpdated) : Infinity;
+    if (previous && Array.isArray(previous.articles) && previous.articles.length && previousAge >= 0 && previousAge <= 24 * 60 * 60 * 1000) {
+      console.log(`⚠️ [Cycle #${updateCycle}] RSS returned no fresh headlines; keeping last-good edition (${Math.round(previousAge / 60000)} min old).\n`);
+    } else {
+      const emptyPayload = { lastUpdated: new Date().toISOString(), totalArticles: 0, articles: [], refreshStatus: 'no-fresh-news' };
+      fs.writeFileSync(targetDataFile, JSON.stringify(emptyPayload, null, 2), 'utf-8');
+      console.log(`⚠️ [Cycle #${updateCycle}] No trusted headlines in the last 24 hours; stale headlines cleared.\n`);
+    }
   }
 }
 
@@ -682,6 +707,22 @@ function startServer(portToTry) {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
 
+    if (pathname === '/api/news' && req.method === 'GET') {
+      const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
+      const newsFile = language === 'en' ? EN_DATA_FILE : DATA_FILE;
+      try {
+        if (!fs.existsSync(newsFile)) return json(res,503,{error:'समाचार अपडेट तैयार हो रहा है।',articles:[]});
+        const payload = JSON.parse(fs.readFileSync(newsFile,'utf-8'));
+        const updatedAt = Date.parse(payload.lastUpdated || '');
+        if (!Number.isFinite(updatedAt) || Date.now() - updatedAt > 24 * 60 * 60 * 1000) {
+          return json(res,200,{lastUpdated:payload.lastUpdated || null,totalArticles:0,articles:[],refreshStatus:'stale-cleared'});
+        }
+        return json(res,200,payload);
+      } catch(e) {
+        console.error('[News API] Read failed:',e.message);
+        return json(res,503,{error:'समाचार अभी उपलब्ध नहीं हैं।',articles:[]});
+      }
+    }
     if (pathname.startsWith('/api/auth/')) return authRoute(req,res,pathname);
     if (pathname === '/api/reels' && req.method === 'GET') {
       try { const q=await pool.query('SELECT id,title,description,video_url,thumbnail_url,category,created_at FROM reels ORDER BY created_at DESC'); return json(res,200,{reels:q.rows}); }
