@@ -752,13 +752,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getStateName(slug) {
     const map = {
-      up: "उत्तर प्रदेश",
-      bihar: "बिहार",
-      delhi: "दिल्ली",
-      mp: "मध्य प्रदेश",
-      rajasthan: "राजस्थान"
+      up: "उत्तर प्रदेश", bihar: "बिहार", delhi: "दिल्ली", mp: "मध्य प्रदेश", rajasthan: "राजस्थान",
+      maharashtra: "महाराष्ट्र", punjab: "पंजाब", haryana: "हरियाणा", uttarakhand: "उत्तराखंड",
+      westbengal: "पश्चिम बंगाल", gujarat: "गुजरात", jk: "जम्मू-कश्मीर", chhattisgarh: "छत्तीसगढ़",
+      jharkhand: "झारखंड", odisha: "ओडिशा", telangana: "तेलंगाना", karnataka: "कर्नाटक",
+      kerala: "केरल", tamilnadu: "तमिलनाडु", andhra: "आंध्र प्रदेश", assam: "असम और पूर्वोत्तर"
     };
-    const englishMap = { up: "Uttar Pradesh", bihar: "Bihar", delhi: "Delhi", mp: "Madhya Pradesh", rajasthan: "Rajasthan" };
+    const englishMap = {
+      up: "Uttar Pradesh", bihar: "Bihar", delhi: "Delhi", mp: "Madhya Pradesh", rajasthan: "Rajasthan",
+      maharashtra: "Maharashtra", punjab: "Punjab", haryana: "Haryana", uttarakhand: "Uttarakhand",
+      westbengal: "West Bengal", gujarat: "Gujarat", jk: "Jammu & Kashmir", chhattisgarh: "Chhattisgarh",
+      jharkhand: "Jharkhand", odisha: "Odisha", telangana: "Telangana", karnataka: "Karnataka",
+      kerala: "Kerala", tamilnadu: "Tamil Nadu", andhra: "Andhra Pradesh", assam: "Assam & Northeast"
+    };
     const value = state.currentLanguage === "en" ? (englishMap[slug] || map[slug] || slug) : (map[slug] || slug);
     return state.currentLanguage === "hinglish" ? romanizeHindiText(value) : value;
   }
