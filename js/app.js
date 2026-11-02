@@ -385,19 +385,10 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.tickerSlider.querySelectorAll(".ticker-item").forEach(itemEl => {
       itemEl.addEventListener("click", () => {
         const id = itemEl.getAttribute("data-ticker-id");
-        const found = NEWS_DATA.breaking.find(b => b.id === id);
-        if (found) {
-          openArticleModal({
-            id: found.id,
-            title: found.title,
-            category: found.category,
-            date: `ताज़ा अपडेट • ${found.time || 'अभी-अभी'}`,
-            author: "News5Indiaa ब्रेकिंग डेस्क",
-            readTime: "2 मिनट",
-            image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80",
-            content: `<p>${found.title}। इस खबर पर अधिक विवरण प्राप्त हो रहे हैं। बने रहें News5Indiaa के साथ सबसे तेज़ और सटीक अपडेट्स के लिए।</p>`
-          });
-        }
+        const breakingItem = NEWS_DATA.breaking.find(b => b.id === id);
+        const articleId = breakingItem ? String(breakingItem.id).replace(/^brk-/, "") : "";
+        const found = (NEWS_DATA.articles || []).find(article => article.id === articleId);
+        if (found) openArticleModal(found);
       });
     });
   }
