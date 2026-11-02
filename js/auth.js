@@ -19,8 +19,6 @@
     account.textContent=user?(user.role==='admin'?'Admin: '+user.username:user.username):'लॉगिन / साइन अप';
     $('n5LogoutBtn').hidden=!user;
     $('n5AdminPanel').hidden=!(user&&user.role==='admin');
-    const legacy=$('openAddInstaModalBtn');
-    if(legacy)legacy.hidden=!(user&&user.role==='admin');
     const adForm=$('n5AdForm');
     if(adForm)adForm.hidden=!(user&&user.role==='admin');
     const currentAd=$('n5AdCurrent');
