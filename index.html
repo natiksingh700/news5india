@@ -273,21 +273,52 @@
           </div>
         </section>
 
+        <!-- Admin tools and Reels are intentionally placed mid-feed for quick access -->
+  <button type="button" id="n5LogoutBtn" class="n5-logout-btn" hidden>लॉगआउट</button>
+  <section class="n5-admin-panel container" id="n5AdminPanel" hidden>
+    <h2>🔒 News5India Admin Panel</h2>
+    <section class="n5-ad-manager" aria-labelledby="n5AdHeading">
+      <h3 id="n5AdHeading">📢 Sticky Sidebar Advertisement</h3>
+      <p>अधिकतम 3 विज्ञापन स्लॉट हैं। खाली स्लॉट में नया विज्ञापन जोड़ें या किसी भरे स्लॉट को चुनकर उसी का विज्ञापन बदलें।</p>
+      <form id="n5AdForm" class="n5-reel-form">
+        <label for="n5AdSlot">Ad Slot चुनें (1 से 3) *</label>
+        <select id="n5AdSlot" required><option value="1">Ad Slot 1</option><option value="2">Ad Slot 2</option><option value="3">Ad Slot 3</option></select>
+        <label for="n5AdTitle">विज्ञापन / ब्रांड का नाम *</label><input id="n5AdTitle" required maxlength="140" placeholder="जैसे: XYZ Showroom का ऑफर">
+        <label for="n5AdSponsor">Advertiser / Sponsor का नाम</label><input id="n5AdSponsor" maxlength="100" placeholder="जैसे: XYZ Motors">
+        <label for="n5AdImage">विज्ञापन की फोटो अपलोड करें * (PNG, JPG, WEBP • अधिकतम 2.5 MB)</label><input id="n5AdImage" type="file" accept="image/png,image/jpeg,image/webp" required>
+        <label for="n5AdLink">Click करने पर खुलने वाला URL (वैकल्पिक)</label><input id="n5AdLink" type="url" placeholder="https://example.com">
+        <button type="submit" id="n5AdPublish" class="n5-reel-publish">📢 विज्ञापन पब्लिश करें</button>
+        <p id="n5AdMessage" class="n5-auth-message" aria-live="polite"></p>
+      </form>
+      <div id="n5AdCurrent" class="n5-ad-current">Active विज्ञापन लोड हो रहा है...</div>
+    </section>
+    <hr class="n5-admin-divider">
+    <h3>🎬 Admin Reel Studio</h3>
+    <form id="n5ReelForm" class="n5-reel-form">
+      <label for="n5ReelTitle">रील का टाइटल *</label><input id="n5ReelTitle" required maxlength="180">
+      <label for="n5ReelCategory">कैटेगरी</label><select id="n5ReelCategory"><option>Breaking News</option><option>Mathura News</option><option>Uttar Pradesh</option><option>Politics</option><option>Crime</option><option>Sports</option><option>Entertainment</option><option>Ground Report</option><option>Other</option></select>
+      <label for="n5ReelDescription">रील का Description *</label><textarea id="n5ReelDescription" required maxlength="3000" rows="4" placeholder="Description और #hashtags लिखें"></textarea>
+      <label for="n5ReelVideo">रील / वीडियो URL *</label><input id="n5ReelVideo" type="url" required>
+      <label for="n5ReelThumbnail">Thumbnail URL (वैकल्पिक — Instagram से अपने-आप लेने की कोशिश होगी)</label><input id="n5ReelThumbnail" type="url" placeholder="खाली छोड़ें तो Instagram thumbnail auto-fetch होगा">
+      <button type="submit" id="n5ReelPublish" class="n5-reel-publish">🚀 रील पब्लिश करें</button><p id="n5ReelMessage" class="n5-auth-message"></p>
+    </form>
+  </section>
+  <section class="n5-public-reels container" id="n5PublicReels"><h2>लेटेस्ट वीडियो और रील्स</h2><div id="n5ReelsGrid" class="n5-reels-grid"></div></section>
+  <section class="n5-public-reels container n5-saved-reels-section" id="n5SavedReelsSection" hidden>
+    <h2>🔖 मेरी सेव की गई रील्स</h2>
+    <p class="n5-saved-reels-note">आपकी सेव की गई रील्स सिर्फ आपके अकाउंट में दिखाई देंगी।</p>
+    <div id="n5SavedReelsGrid" class="n5-reels-grid"></div>
+  </section>
+
+
         <!-- Instagram Visual Stories Section -->
         <section class="webstories-section" id="webStoriesSection">
           <div class="section-title-wrap">
             <h2 class="section-title">
               <span class="title-bar insta-bar"></span>
               <span>Instagram विज़ुअल स्टोरीज़</span>
-              <span class="insta-live-sync-pill" title="24x7 Instagram ऑटो-सिंक सक्रिय है">
-                <span class="live-dot-pulse"></span>
-                <span>AUTO-SYNC LIVE</span>
-              </span>
             </h2>
             <div class="stories-header-actions">
-              <button type="button" class="btn-insta-sync-guide" id="openAddInstaModalBtn" hidden title="Instagram ऑटो-सिंक सेंटर">
-                <span>⚡ ऑटो-सिंक सेंटर</span>
-              </button>
               <a href="https://www.instagram.com/news5indiaa?dlrf=MXZ1ZHV0dTZhOW4xdw==" target="_blank" rel="noopener noreferrer" class="btn-insta-pill" title="News 5 India Instagram पेज देखें">
                 <span class="insta-cam-icon">📸</span>
                 <span>@news5indiaa</span>
@@ -692,101 +723,6 @@
   </div>
 
 
-  <!-- Instagram Auto-Sync & Bridge Modal -->
-  <div class="modal-backdrop" id="addInstaModalBackdrop" hidden>
-    <div class="article-modal insta-sync-modal" role="dialog" aria-modal="true" aria-labelledby="instaModalTitle">
-      <div class="modal-header">
-        <div class="modal-meta-left">
-          <span class="modal-category insta-badge-gradient">⚡ Instagram Auto-Sync Center</span>
-          <span class="modal-date">@news5indiaa Live Bridge</span>
-        </div>
-        <button type="button" id="closeAddInstaModalBtn" class="close-modal-btn" aria-label="बंद करें">✕</button>
-      </div>
-      <div class="insta-modal-body">
-        <div class="insta-modal-tabs">
-          <button type="button" class="insta-tab-btn active" id="tabAutoSyncBtn">⚡ 100% ऑटो-पायलट (बिना कुछ किए)</button>
-          <button type="button" class="insta-tab-btn" id="tabManualSyncBtn">✍️ कस्टम पोस्ट (मैनुअल)</button>
-        </div>
-
-        <!-- Tab 1: 100% Hands-Free Auto-Pilot Webhook -->
-        <div class="insta-tab-content active" id="tabAutoSyncContent">
-          <div class="auto-sync-status-card">
-            <div class="status-indicator-row">
-              <span class="pulse-indicator-dot"></span>
-              <strong>24x7 Instagram ऑटो-सिंक सक्रिय है!</strong>
-            </div>
-            <p class="status-subtext">अब आपको वेबसाइट पर आकर कुछ भी करने की जरूरत नहीं है। जैसे ही आप अपने Instagram <strong>@news5indiaa</strong> पर कोई Reel या Post शेयर करेंगे, वह <strong>सीधे वेबसाइट पर विज़ुअल स्टोरीज़ में लाइव</strong> हो जाएगी!</p>
-          </div>
-
-          <div class="sync-steps-box">
-            <h4>यह कैसे 100% ऑटोमैटिक काम करता है:</h4>
-            <ol class="sync-steps-list">
-              <li>
-                <strong>1. Instagram पर पोस्ट करें:</strong> अपने फोन से Instagram ऐप पर कोई भी Reel या Video पोस्ट करें।
-              </li>
-              <li>
-                <strong>2. लाइव वेबहुक / ऑटो-सिंक:</strong> आपका पोस्ट ऑटोमैटिकली हमारे 24x7 एक्टिव एंडपॉइंट पर आ जाता है:
-                <div class="webhook-url-box">
-                  <code id="webhookUrlDisplay">http://localhost:3000/api/instagram-webhook</code>
-                  <button type="button" class="btn-copy-code" id="copyWebhookBtn" title="URL कॉपी करें">कॉपी</button>
-                </div>
-              </li>
-              <li>
-                <strong>3. वेबसाइट पर ऑटो-पब्लिश:</strong> वेबसाइट हर 45 सेकंड में बैकग्राउंड में साइलेंटली चेक करके नई स्टोरी सबसे आगे लगा देती है।
-              </li>
-            </ol>
-          </div>
-
-          <div class="auto-test-action-wrap">
-            <button type="button" class="btn-test-auto-post" id="btnTestAutoPost">
-              <span>🧪 अभी टेस्ट करें: इंस्टाग्राम से ऑटो-पोस्ट सिमुलेट करें</span>
-            </button>
-            <span class="test-hint">क्लिक करते ही इंस्टाग्राम से एक नया ताज़ा पोस्ट वेबसाइट पर तुरंत आ जाएगा!</span>
-          </div>
-        </div>
-
-        <!-- Tab 2: Manual Post Form -->
-        <div class="insta-tab-content" id="tabManualSyncContent" style="display:none;">
-          <h3 class="insta-modal-title" id="instaModalTitle">Instagram पोस्ट या Reel को तुरंत जोड़ें</h3>
-          <p class="insta-modal-sub">अगर आप किसी खास Reel या पोस्ट को अभी तुरंत विज़ुअल स्टोरी में सबसे ऊपर दिखाना चाहते हैं, तो उसका लिंक यहां डालें:</p>
-          
-          <form id="addInstaStoryForm" class="insta-sync-form">
-            <div class="form-field">
-              <label for="instaPostUrl">Instagram Reel या Post का लिंक <span class="req-star">*</span></label>
-              <input type="url" id="instaPostUrl" placeholder="https://www.instagram.com/reel/... या /p/..." required autocomplete="off" />
-            </div>
-            
-            <div class="form-field">
-              <label for="instaPostTitle">स्टोरी का शीर्षक / कैप्शन <span class="req-star">*</span></label>
-              <input type="text" id="instaPostTitle" placeholder="जैसे: आज की बड़ी ब्रेकिंग न्यूज़ / स्पेशल ग्राउंड रिपोर्ट..." required autocomplete="off" />
-            </div>
-
-            <div class="form-field">
-              <label for="instaPostImage">फोटो / थंबनेल इमेज लिंक (वैकल्पिक)</label>
-              <input type="url" id="instaPostImage" placeholder="https://... (खाली छोड़ सकते हैं)" autocomplete="off" />
-            </div>
-
-            <div class="form-field">
-              <label for="instaPostCategory">श्रेणी (Category)</label>
-              <select id="instaPostCategory">
-                <option value="📸 Instagram Reel">📸 Instagram Reel</option>
-                <option value="मनोरंजन">मनोरंजन (Bollywood & OTT)</option>
-                <option value="बड़ी खबर">बड़ी खबर (Breaking)</option>
-                <option value="क्रिकेट">क्रिकेट व खेल</option>
-                <option value="ग्राउंड रिपोर्ट">ग्राउंड रिपोर्ट</option>
-              </select>
-            </div>
-
-            <div class="form-buttons-row">
-              <button type="button" class="btn-cancel-modal" id="cancelAddInstaBtn">बंद करें</button>
-              <button type="submit" class="btn-submit-insta" id="submitInstaStoryBtn">🚀 तुरंत वेबसाइट पर लाइव करें</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <div class="n5-auth-backdrop" id="n5AuthBackdrop" hidden>
     <section class="n5-auth-card" role="dialog" aria-modal="true">
       <button type="button" id="n5AuthClose" class="n5-auth-close">×</button>
@@ -800,42 +736,6 @@
       </form>
     </section>
   </div>
-  <button type="button" id="n5LogoutBtn" class="n5-logout-btn" hidden>लॉगआउट</button>
-  <section class="n5-admin-panel container" id="n5AdminPanel" hidden>
-    <h2>🔒 News5India Admin Panel</h2>
-    <section class="n5-ad-manager" aria-labelledby="n5AdHeading">
-      <h3 id="n5AdHeading">📢 Sticky Sidebar Advertisement</h3>
-      <p>अधिकतम 3 विज्ञापन स्लॉट हैं। खाली स्लॉट में नया विज्ञापन जोड़ें या किसी भरे स्लॉट को चुनकर उसी का विज्ञापन बदलें।</p>
-      <form id="n5AdForm" class="n5-reel-form">
-        <label for="n5AdSlot">Ad Slot चुनें (1 से 3) *</label>
-        <select id="n5AdSlot" required><option value="1">Ad Slot 1</option><option value="2">Ad Slot 2</option><option value="3">Ad Slot 3</option></select>
-        <label for="n5AdTitle">विज्ञापन / ब्रांड का नाम *</label><input id="n5AdTitle" required maxlength="140" placeholder="जैसे: XYZ Showroom का ऑफर">
-        <label for="n5AdSponsor">Advertiser / Sponsor का नाम</label><input id="n5AdSponsor" maxlength="100" placeholder="जैसे: XYZ Motors">
-        <label for="n5AdImage">विज्ञापन की फोटो अपलोड करें * (PNG, JPG, WEBP • अधिकतम 2.5 MB)</label><input id="n5AdImage" type="file" accept="image/png,image/jpeg,image/webp" required>
-        <label for="n5AdLink">Click करने पर खुलने वाला URL (वैकल्पिक)</label><input id="n5AdLink" type="url" placeholder="https://example.com">
-        <button type="submit" id="n5AdPublish" class="n5-reel-publish">📢 विज्ञापन पब्लिश करें</button>
-        <p id="n5AdMessage" class="n5-auth-message" aria-live="polite"></p>
-      </form>
-      <div id="n5AdCurrent" class="n5-ad-current">Active विज्ञापन लोड हो रहा है...</div>
-    </section>
-    <hr class="n5-admin-divider">
-    <h3>🎬 Admin Reel Studio</h3>
-    <form id="n5ReelForm" class="n5-reel-form">
-      <label for="n5ReelTitle">रील का टाइटल *</label><input id="n5ReelTitle" required maxlength="180">
-      <label for="n5ReelCategory">कैटेगरी</label><select id="n5ReelCategory"><option>Breaking News</option><option>Mathura News</option><option>Uttar Pradesh</option><option>Politics</option><option>Crime</option><option>Sports</option><option>Entertainment</option><option>Ground Report</option><option>Other</option></select>
-      <label for="n5ReelDescription">रील का Description *</label><textarea id="n5ReelDescription" required maxlength="3000" rows="4" placeholder="Description और #hashtags लिखें"></textarea>
-      <label for="n5ReelVideo">रील / वीडियो URL *</label><input id="n5ReelVideo" type="url" required>
-      <label for="n5ReelThumbnail">Thumbnail URL (वैकल्पिक — Instagram से अपने-आप लेने की कोशिश होगी)</label><input id="n5ReelThumbnail" type="url" placeholder="खाली छोड़ें तो Instagram thumbnail auto-fetch होगा">
-      <button type="submit" id="n5ReelPublish" class="n5-reel-publish">🚀 रील पब्लिश करें</button><p id="n5ReelMessage" class="n5-auth-message"></p>
-    </form>
-  </section>
-  <section class="n5-public-reels container" id="n5PublicReels"><h2>लेटेस्ट वीडियो और रील्स</h2><div id="n5ReelsGrid" class="n5-reels-grid"></div></section>
-  <section class="n5-public-reels container n5-saved-reels-section" id="n5SavedReelsSection" hidden>
-    <h2>🔖 मेरी सेव की गई रील्स</h2>
-    <p class="n5-saved-reels-note">आपकी सेव की गई रील्स सिर्फ आपके अकाउंट में दिखाई देंगी।</p>
-    <div id="n5SavedReelsGrid" class="n5-reels-grid"></div>
-  </section>
-
   <!-- Toast Notification -->
   <div class="toast-notification" id="toastNotification" role="alert" aria-live="assertive"></div>
 
