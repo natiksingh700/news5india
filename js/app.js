@@ -210,6 +210,76 @@ document.addEventListener("DOMContentLoaded", () => {
       return out.replace(/a\b/gi, "");
     }).join("");
   }
+  // Translate the complete visible interface, including text inserted later by renderers.
+  const originalTextNodes = new WeakMap();
+  const originalAttributes = new WeakMap();
+  const interfaceEnglish = {
+    "होम":"Home","बड़ी खबर":"Breaking News","देश":"National","राज्य / शहर":"States / Cities",
+    "राजनीति":"Politics","क्रिकेट / खेल":"Cricket / Sports","मनोरंजन":"Entertainment",
+    "बिज़नेस":"Business","दुनिया":"World","फिल्में":"Movies","वेब सीरीज़ / OTT":"Web Series / OTT",
+    "ट्रेलर":"Trailers","बॉक्स ऑफिस":"Box Office","विज्ञान":"Science","शिक्षा":"Education",
+    "नौकरी":"Jobs","गैजेट्स":"Gadgets","गेमिंग":"Gaming","ऑटो / EV":"Auto / EV",
+    "हेल्थ":"Health","मौसम":"Weather","कृषि":"Agriculture","पर्यावरण":"Environment","टेक":"Technology",
+    "वीडियो":"Videos","वेब स्टोरीज़":"Web Stories","लॉगिन":"Login","लॉगिन करें":"Log in",
+    "नया अकाउंट":"Create account","अकाउंट बनाएं":"Create account","यूज़रनेम या ईमेल":"Username or email",
+    "पासवर्ड":"Password","ईमेल":"Email","रील सेव करने के लिए लॉगिन करें या अकाउंट बनाएं।":"Log in or create an account to save reels.",
+    "लेटेस्ट वीडियो और रील्स":"Latest Videos & Reels","मेरी सेव की गई रील्स":"My Saved Reels",
+    "रील का टाइटल *":"Reel Title *","कैटेगरी":"Category","रील का Description *":"Reel Description *",
+    "रील / वीडियो URL *":"Reel / Video URL *","रील पब्लिश करें":"Publish Reel",
+    "मुख्य बिंदु:":"Key Points:","पाठकों की प्रतिक्रियाएं (टिप्पणियां)":"Reader Comments",
+    "सबसे ज्यादा पढ़ी गई खबरें":"Most Read Stories","प्रमुख श्रेणियां":"Top Categories",
+    "राज्य संस्करण":"State Editions","डिजिटल सेवाएं":"Digital Services","संपादकीय एवं नीतियां":"Editorial & Policies",
+    "राज्य चुनें":"Choose State","समाचार खोजें":"Search News","सर्च करें":"Search",
+    "ई-पेपर पढ़ें":"Read E-Paper","लाइव टीवी देखें":"Watch Live TV","लाइव प्रसारण देखें":"Watch Live Broadcast",
+    "फॉन्ट छोटा करें":"Decrease font size","फॉन्ट बड़ा करें":"Increase font size",
+    "डार्क मोड बदलें":"Toggle dark mode","पिछली खबर":"Previous story","अगली खबर":"Next story",
+    "रोके या चलाएं":"Pause or play","श्रेणी: ":"Category: ","खबर का शीर्षक":"Story headline",
+    "लाइव टीवी प्रसारण":"Live TV Broadcast","डिजिटल ई-पेपर":"Digital E-Paper",
+    "विज्ञापन की इमेज चुनें।":"Choose an ad image.","रील पब्लिश हो रही है...":"Publishing reel...",
+    "कृपया प्रतीक्षा करें...":"Please wait...","अभी-अभी":"Just now"
+  };
+  const attributeNames = ["aria-label","title","placeholder","alt"];
+  function translateNode(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
+      const original = originalTextNodes.get(node);
+      if (state.currentLanguage === "hinglish") node.nodeValue = romanizeHindiText(original);
+      else if (state.currentLanguage === "en") node.nodeValue = interfaceEnglish[original.trim()] ? original.replace(original.trim(), interfaceEnglish[original.trim()]) : original;
+      else node.nodeValue = original;
+      return;
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    attributeNames.forEach(name => {
+      if (!node.hasAttribute(name)) return;
+      let values = originalAttributes.get(node);
+      if (!values) { values = {}; originalAttributes.set(node, values); }
+      if (!(name in values)) values[name] = node.getAttribute(name);
+      const original = values[name];
+      node.setAttribute(name, state.currentLanguage === "hinglish" ? romanizeHindiText(original) :
+        state.currentLanguage === "en" ? (interfaceEnglish[original] || original) : original);
+    });
+    if (node.matches && node.matches("#categoryNav .nav-link")) {
+      const slug = node.getAttribute("data-category");
+      const englishCategories = {all:"Home",breaking:"Breaking News",national:"National",state:"States / Cities",politics:"Politics",sports:"Cricket / Sports",entertainment:"Entertainment",business:"Business",world:"World",movies:"Movies",ott:"Web Series / OTT",trailers:"Trailers",boxoffice:"Box Office",science:"Science",education:"Education",jobs:"Jobs",ai:"AI",gadgets:"Gadgets",gaming:"Gaming",auto:"Auto / EV",health:"Health",weather:"Weather",agriculture:"Agriculture",environment:"Environment",tech:"Technology",videos:"Videos",webstories:"Web Stories"};
+      if (state.currentLanguage === "en" && englishCategories[slug]) node.textContent = (slug === "breaking" ? "⚡ " : "") + englishCategories[slug];
+    }
+    node.childNodes && node.childNodes.forEach(translateNode);
+  }
+  function applyInterfaceLanguage(root = document.body) {
+    if (!root) return;
+    translateNode(root);
+  }
+  const interfaceObserver = new MutationObserver(records => {
+    records.forEach(record => {
+      if (record.type === "childList") record.addedNodes.forEach(translateNode);
+      else if (record.type === "characterData") translateNode(record.target);
+    });
+  });
+  if (document.body) {
+    applyInterfaceLanguage();
+    interfaceObserver.observe(document.body, {subtree:true,childList:true,characterData:true});
+  }
+
   function hinglishArticle(article) {
     const copy = { ...article };
     ["title", "excerpt", "category", "author", "date", "stateName"].forEach(key => {
@@ -280,6 +350,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!["hi", "hinglish", "en"].includes(language)) return;
     state.currentLanguage = language;
     localStorage.setItem("news5_language", language);
+    applyInterfaceLanguage();
     silentBackgroundSync().then(() => {
       const labels = { hi: "हिन्दी", hinglish: "Hinglish", en: "English" };
       showToast(labels[language] + " news selected");
