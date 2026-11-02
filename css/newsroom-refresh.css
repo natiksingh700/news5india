@@ -1,0 +1,124 @@
+/* News5India newsroom refresh — original visual system inspired by modern Indian digital-news layouts */
+:root{
+  --n5-red:#c91625;--n5-red-dark:#9f1020;--n5-ink:#171a21;--n5-muted:#687080;
+  --n5-paper:#f4f5f7;--n5-line:#e4e6eb;--n5-card:#fff;
+}
+html,body{background:var(--n5-paper);color:var(--n5-ink)}
+body{font-family:"Mukta","Inter",sans-serif}
+.container{width:min(1280px,calc(100% - 36px));max-width:1280px}
+.top-bar{background:#171a21;color:#e8eaf0;border-bottom:0;min-height:34px}
+.top-bar-inner{min-height:34px}
+.top-bar .live-date,.top-bar .edition-dropdown,.top-bar .weather-pill{color:#e8eaf0}
+.top-bar .font-btn,.top-bar .theme-toggle{color:#fff;background:#292d36;border-color:#454a55}
+.main-header{background:#fff;border-bottom:1px solid var(--n5-line);box-shadow:0 3px 16px #1519230b}
+.header-inner{min-height:88px;padding-top:10px;padding-bottom:10px}
+.brand-title{font-weight:950;letter-spacing:-.8px}
+.brand-news,.brand-india{color:var(--n5-ink)}
+.brand-five-badge{background:var(--n5-red);color:#fff;box-shadow:none}
+.brand-tagline{color:var(--n5-muted);font-weight:700}
+.header-actions{gap:10px}
+.header-cta,.header-livetv-btn{border-radius:7px;font-weight:850}
+.epaper-cta{background:#f1f2f4;color:#252a33;border:1px solid #e2e4e9}
+.header-livetv-btn{background:var(--n5-red);box-shadow:none}
+.language-switcher{border-radius:7px;background:#f7f7f8;border-color:#e1e3e8}
+.n5-account-btn{border-radius:7px;background:var(--n5-ink)}
+.nav-bar{background:#222630;border:0;box-shadow:0 4px 12px #1118271c}
+.nav-list{gap:0}
+.nav-link{color:#f4f5f7;padding:13px 14px;font-size:15px;font-weight:800;white-space:nowrap;border-bottom:3px solid transparent}
+.nav-link:hover,.nav-item.active .nav-link{background:#303541;color:#fff;border-bottom-color:#ed2638}
+.breaking-ticker-wrap{background:#fff;border-top:1px solid #e9e9ec;border-bottom:1px solid #e2e4e9}
+.ticker-inner{min-height:48px}
+.ticker-badge{background:var(--n5-red);border-radius:0;color:#fff;padding:8px 14px;font-weight:950}
+.ticker-pulse{background:#fff}
+.ticker-headline,.ticker-cat{font-weight:750}
+.cricket-strip{background:#202630;color:#fff;border-bottom:3px solid var(--n5-red)}
+.cricket-title,.cricket-note,.team-score,.vs-text{color:#f7f7f8}
+.main-body{padding-top:24px;padding-bottom:42px}
+.portal-grid{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:26px;align-items:start}
+.feed-column{min-width:0;display:flex;flex-direction:column;gap:22px}
+.lead-card{display:grid;grid-template-columns:minmax(0,1.12fr) minmax(280px,.88fr);background:#fff;border:1px solid var(--n5-line);border-radius:12px;overflow:hidden;box-shadow:0 8px 28px #18202d0b;cursor:pointer}
+.lead-img-wrap{min-height:350px;position:relative;overflow:hidden}
+.lead-img{width:100%;height:100%;min-height:350px;object-fit:cover;transition:transform .35s}
+.lead-card:hover .lead-img{transform:scale(1.025)}
+.lead-badge{background:var(--n5-red);border-radius:4px;left:16px;top:16px}
+.lead-content{padding:26px 24px;display:flex;flex-direction:column;justify-content:center}
+.lead-meta{color:var(--n5-muted);font-size:13px;font-weight:750;display:flex;flex-wrap:wrap;gap:8px}
+.lead-title{font-size:clamp(24px,2.4vw,34px);line-height:1.25;letter-spacing:-.35px;color:#151923;margin:12px 0}
+.lead-subtitle{font-size:16px;line-height:1.65;color:#555e6d}
+.lead-footer{border-top:1px solid var(--n5-line);padding-top:14px;margin-top:18px;color:#6a7280;font-size:13px}
+.lead-read-btn{color:var(--n5-red);font-weight:900}
+.state-hub-section,.news-feed-section,.webstories-section,.video-section{background:transparent}
+.section-title-wrap{margin-bottom:12px}
+.section-title{font-size:22px;font-weight:950;color:#171a21;display:flex;align-items:center;gap:10px}
+.title-bar.red-bar,.title-bar.insta-bar{width:5px;height:25px;border-radius:4px;background:var(--n5-red)}
+.state-chips{gap:8px}
+.state-chip{border:1px solid #dfe2e8;background:#fff;border-radius:999px;color:#333b48;font-weight:800;padding:7px 14px}
+.state-chip.active,.state-chip:hover{background:var(--n5-red);border-color:var(--n5-red);color:#fff}
+.news-feed-section{background:#fff;border:1px solid var(--n5-line);border-radius:12px;padding:18px;box-shadow:0 5px 18px #18202d08}
+.news-feed-section:before{content:"ताज़ा खबरें";display:block;font-size:21px;font-weight:950;color:#171a21;border-left:5px solid var(--n5-red);padding-left:11px;margin:0 0 14px}
+.news-cards-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 18px}
+.news-card{display:grid;grid-template-columns:132px minmax(0,1fr);gap:13px;padding:14px 0;border-bottom:1px solid #eceef1;cursor:pointer;min-width:0}
+.news-card:first-child,.news-card:nth-child(2){padding-top:0}
+.news-card-img-wrap{height:100px;min-height:100px;border-radius:8px;overflow:hidden;position:relative}
+.news-card-img{width:100%;height:100%;object-fit:cover}
+.card-category-badge{left:5px;bottom:5px;background:#171a21e8;color:#fff;border-radius:3px;font-size:10px;padding:3px 6px}
+.news-card-body{padding:0;min-width:0}
+.news-card-meta{font-size:11px;color:#8a909b;margin-bottom:5px}
+.news-card-title{font-size:16px;line-height:1.35;font-weight:900;color:#242a35;margin:0 0 5px}
+.news-card-excerpt{font-size:13px;line-height:1.45;color:#687080;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.news-card-footer{font-size:11px;color:var(--n5-red);font-weight:800;margin-top:5px}
+.sidebar-column{display:flex;flex-direction:column;gap:16px;min-width:0}
+.sidebar-card{background:#fff;border:1px solid var(--n5-line);border-radius:11px;box-shadow:0 5px 18px #18202d08;overflow:hidden}
+.card-heading{padding:14px 16px;border-bottom:1px solid #eceef1}
+.card-heading h3{font-size:18px;font-weight:950;color:#202530}
+.trending-list{padding:4px 16px 12px;counter-reset:trending}
+.trending-list li{padding:11px 0;border-bottom:1px solid #eceef1;font-weight:800;line-height:1.4;color:#303744}
+.trending-list li:last-child{border-bottom:0}
+.epaper-promo-card,.poll-card,.social-ad-card,.whatsapp-promo-card{padding:16px}
+.webstories-section,.video-section{background:#fff;border:1px solid var(--n5-line);border-radius:12px;padding:18px;box-shadow:0 5px 18px #18202d08}
+.insta-live-sync-pill{display:none!important}
+.stories-header-actions .btn-insta-pill{border-radius:6px;background:#f5f5f7;color:#313744}
+.story-card,.video-card{border-radius:9px;overflow:hidden}
+.video-grid{gap:14px}
+.video-card{background:#fff;border:1px solid var(--n5-line)}
+.video-info{padding:11px}
+.video-title{font-weight:900;line-height:1.35}
+.n5-admin-panel,.n5-public-reels{width:100%;max-width:none;margin:0;padding:22px;background:#fff;border:1px solid var(--n5-line);border-radius:12px;box-shadow:0 5px 18px #18202d08}
+.n5-admin-panel h2,.n5-public-reels h2{font-size:22px;font-weight:950;border-left:5px solid var(--n5-red);padding-left:11px}
+.n5-reel-publish,.n5-auth-submit{background:var(--n5-red);border-radius:7px}
+.portal-footer{border-top:4px solid var(--n5-red)}
+@media(max-width:1000px){
+ .portal-grid{grid-template-columns:minmax(0,1fr) 280px;gap:18px}
+ .lead-card{grid-template-columns:1fr}
+ .lead-img-wrap,.lead-img{min-height:280px;height:280px}
+ .lead-content{padding:20px}
+ .news-cards-grid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+ .container{width:min(100% - 22px,680px)}
+ .top-bar-inner{gap:6px}
+ .header-inner{min-height:68px}
+ .brand-title{font-size:1.2rem}
+ .header-actions{gap:5px}
+ .portal-grid{display:flex;flex-direction:column}
+ .feed-column,.sidebar-column{width:100%}
+ .sidebar-column{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+ .studio-spotlight-card{grid-column:1/-1}
+ .lead-img-wrap,.lead-img{height:230px;min-height:230px}
+ .lead-content{padding:17px}
+ .lead-title{font-size:23px}
+ .news-feed-section,.webstories-section,.video-section{padding:13px}
+ .news-card{grid-template-columns:112px minmax(0,1fr);gap:10px}
+ .news-card-img-wrap{height:88px;min-height:88px}
+ .news-card-title{font-size:14px}
+ .news-card-excerpt{font-size:12px}
+ .section-title{font-size:19px}
+ .nav-link{padding:11px 12px;font-size:14px}
+ .n5-admin-panel,.n5-public-reels{padding:15px}
+}
+@media(max-width:420px){
+ .sidebar-column{grid-template-columns:1fr}
+ .header-livetv-btn{display:none}
+ .news-card{grid-template-columns:96px minmax(0,1fr)}
+ .news-card-img-wrap{height:82px;min-height:82px}
+}
