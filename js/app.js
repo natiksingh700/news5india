@@ -783,10 +783,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const remaining = filtered.length - visibleArticles.length;
     const canFetchMore = !state.searchQuery && !state.moreNewsExhausted;
     const loadMoreMarkup = remaining > 0
-      ? \`<div class="news-load-more-wrap" id="newsLoadMoreWrap"><div class="news-load-more-sentinel" id="newsLoadMoreSentinel" aria-hidden="true"></div><button type="button" class="news-load-more-btn" id="newsLoadMoreBtn">और खबरें देखें <span>↓</span></button><small>\${remaining} और खबरें उपलब्ध</small></div>\`
+      ? `<div class="news-load-more-wrap" id="newsLoadMoreWrap"><div class="news-load-more-sentinel" id="newsLoadMoreSentinel" aria-hidden="true"></div><button type="button" class="news-load-more-btn" id="newsLoadMoreBtn">और खबरें देखें <span>↓</span></button><small>${remaining} और खबरें उपलब्ध</small></div>`
       : canFetchMore
-        ? \`<div class="news-load-more-wrap" id="newsLoadMoreWrap">\${state.moreNewsPaused ? "" : '<div class="news-load-more-sentinel" id="newsLoadMoreSentinel" aria-hidden="true"></div>'}<button type="button" class="news-load-more-btn" id="newsLoadMoreBtn" \${state.moreNewsLoading ? "disabled" : ""}>\${state.moreNewsLoading ? "ताज़ा खबरें लोड हो रही हैं…" : "और ताज़ा खबरें लोड करें ↓"}</button><small>स्क्रॉल करते रहें — नई खबरें जोड़ी जाएँगी</small></div>\`
-        : \`<div class="news-end-note" id="newsEndNote">फिलहाल नई खबरें उपलब्ध नहीं हैं। कुछ देर बाद फिर आएँ।</div>\`;
+        ? `<div class="news-load-more-wrap" id="newsLoadMoreWrap">${state.moreNewsPaused ? "" : '<div class="news-load-more-sentinel" id="newsLoadMoreSentinel" aria-hidden="true"></div>'}<button type="button" class="news-load-more-btn" id="newsLoadMoreBtn" ${state.moreNewsLoading ? "disabled" : ""}>${state.moreNewsLoading ? "ताज़ा खबरें लोड हो रही हैं…" : "और ताज़ा खबरें लोड करें ↓"}</button><small>स्क्रॉल करते रहें — नई खबरें जोड़ी जाएँगी</small></div>`
+        : `<div class="news-end-note" id="newsEndNote">फिलहाल नई खबरें उपलब्ध नहीं हैं। कुछ देर बाद फिर आएँ।</div>`;
     elements.newsCardsGrid.insertAdjacentHTML("beforeend", loadMoreMarkup);
 
     const loadButton = document.getElementById("newsLoadMoreBtn");
