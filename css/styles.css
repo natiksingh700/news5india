@@ -3335,3 +3335,9 @@ img {
 .n5-admin-ad-slot .n5-admin-ad-preview{width:100%;height:140px}
 .n5-admin-ad-slot .n5-account-btn{font-size:12px;padding:8px 10px}
 @media(max-width:640px){.n5-admin-ad-current{grid-template-columns:1fr}.n5-admin-ad-slot .n5-admin-ad-preview{height:180px}}
+
+/* Saved reels and per-reel save controls */
+.n5-saved-reels-section[hidden]{display:none!important}
+.n5-saved-reels-note{margin:-8px 0 18px;color:var(--text-muted,#64748b);font-size:14px}
+.n5-save-reel-btn{margin:8px 8px 0 0;background:#243b65}
+.n5-save-reel-btn[aria-pressed="true"]{background:#176b45}
