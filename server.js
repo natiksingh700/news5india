@@ -238,7 +238,9 @@ const TRUSTED_PUBLISHER_PATTERNS = [
   "etv bharat", "dd news", "amar ujala", "dainik jagran", "live hindustan",
   "hindustan", "economic times", "business standard", "mint", "cnbc-tv18",
   "moneycontrol", "espncricinfo", "cricbuzz", "the quint", "scroll.in",
-  "the wire", "deccan herald", "the telegraph", "india tv", "pib"
+  "the wire", "deccan herald", "the telegraph", "india tv", "pib",
+  "दैनिक जागरण", "अमर उजाला", "हिन्दुस्तान", "आज तक", "एबीपी न्यूज़",
+  "एनडीटीवी", "इंडिया टीवी", "बीबीसी हिंदी", "पीटीआई", "एएनआई", "न्यूज़18", "ज़ी न्यूज़"
 ];
 
 function isTrustedPublisher(source) {
@@ -336,8 +338,8 @@ async function autoUpdateAllNews() {
   for (const feed of FEED_CONFIG) {
     try {
       const rawXml = await fetchRaw(feed.url);
-      const parsedItems = parseXmlItems(rawXml, feed.maxItems);
-      const items = parsedItems.filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) && isRecentArticle(item.pubDate));
+      const parsedItems = parseXmlItems(rawXml, Math.max(feed.maxItems * 5, 20));
+      const items = parsedItems.filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) && isRecentArticle(item.pubDate)).slice(0, feed.maxItems);
       console.log('   🔎 ' + feed.category + ': ' + (parsedItems.length - items.length) + ' items withheld (untrusted source or stale date)');
 
       items.forEach((item, i) => {
