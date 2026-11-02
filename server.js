@@ -71,7 +71,23 @@ const EXTRA_FEEDS = [
   { query: 'India election commission parliament government policy news', category: 'सरकार और नीति', slug: 'governance', author: 'News5Indiaa पॉलिसी डेस्क', maxItems: 2 },
   { query: 'Uttar Pradesh crime police court latest news', category: 'यूपी क्राइम', slug: 'crime', state: 'up', stateName: 'उत्तर प्रदेश', author: 'News5Indiaa यूपी क्राइम ब्यूरो', maxItems: 2 },
   { query: 'Mathura Vrindavan local news administration police', category: 'मथुरा-वृंदावन', slug: 'state', state: 'up', stateName: 'मथुरा-वृंदावन', author: 'News5Indiaa मथुरा ब्यूरो', maxItems: 3 },
-  { query: 'Agra local news administration police Uttar Pradesh', category: 'आगरा', slug: 'state', state: 'up', stateName: 'आगरा', author: 'News5Indiaa आगरा ब्यूरो', maxItems: 2 }
+  { query: 'Agra local news administration police Uttar Pradesh', category: 'आगरा', slug: 'state', state: 'up', stateName: 'आगरा', author: 'News5Indiaa आगरा ब्यूरो', maxItems: 2 },
+  { query: 'Maharashtra Mumbai Pune Nagpur Nashik latest news government police civic', category: 'राज्य', slug: 'state', state: 'maharashtra', stateName: 'महाराष्ट्र', author: 'News5Indiaa महाराष्ट्र ब्यूरो', maxItems: 2 },
+  { query: 'Punjab Chandigarh Ludhiana Amritsar latest news government police civic', category: 'राज्य', slug: 'state', state: 'punjab', stateName: 'पंजाब', author: 'News5Indiaa पंजाब ब्यूरो', maxItems: 2 },
+  { query: 'Haryana Gurugram Faridabad Hisar latest news government police civic', category: 'राज्य', slug: 'state', state: 'haryana', stateName: 'हरियाणा', author: 'News5Indiaa हरियाणा ब्यूरो', maxItems: 2 },
+  { query: 'Uttarakhand Dehradun Haridwar Haldwani latest news government police civic', category: 'राज्य', slug: 'state', state: 'uttarakhand', stateName: 'उत्तराखंड', author: 'News5Indiaa उत्तराखंड ब्यूरो', maxItems: 2 },
+  { query: 'West Bengal Kolkata Siliguri latest news government police civic', category: 'राज्य', slug: 'state', state: 'westbengal', stateName: 'पश्चिम बंगाल', author: 'News5Indiaa पश्चिम बंगाल ब्यूरो', maxItems: 2 },
+  { query: 'Gujarat Ahmedabad Surat Vadodara latest news government police civic', category: 'राज्य', slug: 'state', state: 'gujarat', stateName: 'गुजरात', author: 'News5Indiaa गुजरात ब्यूरो', maxItems: 2 },
+  { query: 'Jammu Kashmir Srinagar Jammu latest news government police civic', category: 'राज्य', slug: 'state', state: 'jk', stateName: 'जम्मू-कश्मीर', author: 'News5Indiaa जम्मू-कश्मीर ब्यूरो', maxItems: 2 },
+  { query: 'Chhattisgarh Raipur Bilaspur latest news government police civic', category: 'राज्य', slug: 'state', state: 'chhattisgarh', stateName: 'छत्तीसगढ़', author: 'News5Indiaa छत्तीसगढ़ ब्यूरो', maxItems: 2 },
+  { query: 'Jharkhand Ranchi Jamshedpur Dhanbad latest news government police civic', category: 'राज्य', slug: 'state', state: 'jharkhand', stateName: 'झारखंड', author: 'News5Indiaa झारखंड ब्यूरो', maxItems: 2 },
+  { query: 'Odisha Bhubaneswar Cuttack latest news government police civic', category: 'राज्य', slug: 'state', state: 'odisha', stateName: 'ओडिशा', author: 'News5Indiaa ओडिशा ब्यूरो', maxItems: 2 },
+  { query: 'Telangana Hyderabad Warangal latest news government police civic', category: 'राज्य', slug: 'state', state: 'telangana', stateName: 'तेलंगाना', author: 'News5Indiaa तेलंगाना ब्यूरो', maxItems: 2 },
+  { query: 'Karnataka Bengaluru Mysuru Mangaluru latest news government police civic', category: 'राज्य', slug: 'state', state: 'karnataka', stateName: 'कर्नाटक', author: 'News5Indiaa कर्नाटक ब्यूरो', maxItems: 2 },
+  { query: 'Kerala Thiruvananthapuram Kochi Kozhikode latest news government police civic', category: 'राज्य', slug: 'state', state: 'kerala', stateName: 'केरल', author: 'News5Indiaa केरल ब्यूरो', maxItems: 2 },
+  { query: 'Tamil Nadu Chennai Coimbatore Madurai latest news government police civic', category: 'राज्य', slug: 'state', state: 'tamilnadu', stateName: 'तमिलनाडु', author: 'News5Indiaa तमिलनाडु ब्यूरो', maxItems: 2 },
+  { query: 'Andhra Pradesh Amaravati Visakhapatnam Vijayawada latest news government police civic', category: 'राज्य', slug: 'state', state: 'andhra', stateName: 'आंध्र प्रदेश', author: 'News5Indiaa आंध्र प्रदेश ब्यूरो', maxItems: 2 },
+  { query: 'Assam Guwahati Northeast India latest news government police civic', category: 'राज्य', slug: 'state', state: 'assam', stateName: 'असम और पूर्वोत्तर', author: 'News5Indiaa असम और पूर्वोत्तर ब्यूरो', maxItems: 2 }
 ];
 
 function buildSearchFeed(feed) {
