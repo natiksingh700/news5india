@@ -664,10 +664,10 @@ async function initAdmin(){
   const hash=await hashPass(password);
   await pool.query("INSERT INTO users(username,email,password_hash,role) VALUES($1,$2,$3,'admin') ON CONFLICT(username) DO UPDATE SET email=EXCLUDED.email,password_hash=EXCLUDED.password_hash,role='admin'",[username,email,hash]);
 }
-const startupReady = initDB().then(initAdmin).catch(e => { console.error('Database/admin initialization failed:', e.message); throw e; });
+const startupReady = initDB().then(async ready => { if (!ready) return false; await initAdmin(); return true; }).catch(e => { console.error('Database/admin initialization failed:', e.message); return false; });
 async function authRoute(req,res,path){
   // Do not authenticate until DB schema and the admin password hash are initialized.
-  try { await startupReady; } catch (e) { return json(res,503,{error:'सर्वर का डेटाबेस तैयार नहीं है। कुछ देर बाद दोबारा कोशिश करें।'}); }
+  if (!(await startupReady)) return json(res,503,{error:'सर्वर का डेटाबेस तैयार नहीं है। Render में DATABASE_URL जांचें और कुछ देर बाद दोबारा कोशिश करें।'});
   if(path==='/api/auth/me'&&req.method==='GET'){const u=currentSession(req);return json(res,200,{authenticated:!!u,user:u?{id:u.id,username:u.username,role:u.role}:null});}
   if(path==='/api/auth/logout'&&req.method==='POST'){setCookie(res,'',0);return json(res,200,{success:true});}
   if(path==='/api/auth/register'&&req.method==='POST'){
