@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // App State
   const state = {
     currentCategory: "all",
+    currentLanguage: localStorage.getItem("news5_language") || "hi",
     currentState: "all",
     searchQuery: "",
     tickerIndex: 0,
@@ -31,6 +32,7 @@ document.addEventListener("DOMContentLoaded", () => {
     btnTopLiveTv: document.getElementById("btnTopLiveTv"),
     btnHeaderLiveTv: document.getElementById("btnHeaderLiveTv"),
     homeLogoLink: document.getElementById("homeLogoLink"),
+    newsLanguageSelect: document.getElementById("newsLanguageSelect"),
 
     // Header & Search
     hamburgerBtn: document.getElementById("hamburgerBtn"),
@@ -179,39 +181,74 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ==========================================================================
      2. Silent Background Auto-Sync (Keeps world & national news fresh)
      ========================================================================== */
+  function romanizeHindiText(input) {
+    const consonants = {
+      "क":"k","ख":"kh","ग":"g","घ":"gh","ङ":"ng","च":"ch","छ":"chh","ज":"j","झ":"jh","ञ":"ny",
+      "ट":"t","ठ":"th","ड":"d","ढ":"dh","ण":"n","त":"t","थ":"th","द":"d","ध":"dh","न":"n",
+      "प":"p","फ":"ph","ब":"b","भ":"bh","म":"m","य":"y","र":"r","ल":"l","व":"v",
+      "श":"sh","ष":"sh","स":"s","ह":"h","क़":"q","ख़":"kh","ग़":"gh","ज़":"z","ड़":"r","ढ़":"rh","फ़":"f"
+    };
+    const vowels = {"अ":"a","आ":"aa","इ":"i","ई":"ee","उ":"u","ऊ":"oo","ऋ":"ri","ए":"e","ऐ":"ai","ओ":"o","औ":"au"};
+    const marks = {"ा":"aa","ि":"i","ी":"ee","ु":"u","ू":"oo","ृ":"ri","े":"e","ै":"ai","ो":"o","ौ":"au","ं":"n","ँ":"n","ः":"h"};
+    const chars = Array.from(String(input || ""));
+    let out = "";
+    for (let i = 0; i < chars.length; i++) {
+      const ch = chars[i];
+      if (consonants[ch]) {
+        let syllable = consonants[ch] + "a";
+        const next = chars[i + 1];
+        if (next === "्") { syllable = consonants[ch]; i++; }
+        else if (marks[next]) { syllable = consonants[ch] + marks[next]; i++; }
+        out += syllable;
+      } else if (vowels[ch]) out += vowels[ch];
+      else if (marks[ch]) out += marks[ch];
+      else if (ch === "्" || ch === "़" || ch === "‍" || ch === "‌") continue;
+      else out += ch;
+    }
+    return out.replace(/a\b/gi, "").replace(/\s+/g, " ").trim();
+  }
+
+  function hinglishArticle(article) {
+    const copy = { ...article };
+    ["title", "excerpt", "category", "author", "date", "stateName"].forEach(key => {
+      if (typeof copy[key] === "string") copy[key] = romanizeHindiText(copy[key]);
+    });
+    if (typeof copy.content === "string") {
+      copy.content = copy.content.replace(/>([^<]+)</g, (match, text) => ">" + romanizeHindiText(text) + "<");
+    }
+    if (Array.isArray(copy.bullets)) copy.bullets = copy.bullets.map(romanizeHindiText);
+    return copy;
+  }
+
   async function silentBackgroundSync() {
     try {
-      const res = await fetch("data/live-news.json?t=" + Date.now(), { cache: "no-store" });
+      const languageFile = state.currentLanguage === "en" ? "data/live-news-en.json" : "data/live-news.json";
+      const res = await fetch(languageFile + "?t=" + Date.now(), { cache: "no-store" });
       if (res.ok) {
         const liveData = await res.json();
         const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
-        if (target && Array.isArray(target.articles) && Array.isArray(liveData.articles)) {
-          // Replace the previous auto-fetched set instead of keeping stale live headlines forever.
-          const editorialArticles = target.articles.filter(article => !String(article.id).startsWith("live-"));
-          target.articles = [...liveData.articles, ...editorialArticles].slice(0, 120);
-
-          // The newest fetched article drives the lead story; clear it when no verified items remain.
-          const newest = liveData.articles[0];
+        if (target && Array.isArray(liveData.articles)) {
+          const articles = state.currentLanguage === "hinglish"
+            ? liveData.articles.map(hinglishArticle)
+            : liveData.articles;
+          target.articles = articles;
+          const newest = articles[0];
           target.leadStory = newest ? {
             ...newest,
             subtitle: newest.excerpt || newest.title,
             bullets: [],
-            date: newest.date || "अभी-अभी",
-            readTime: newest.readTime || "2 मिनट"
+            date: newest.date || (state.currentLanguage === "en" ? "Just now" : "Abhi-abhi"),
+            readTime: state.currentLanguage === "en" ? "2 min read" : "2 minute"
           } : null;
           renderLeadStory();
-
-          // Refresh the ticker from the latest RSS headlines.
-          if (Array.isArray(target.breaking)) {
-            target.breaking = liveData.articles.slice(0, 5).map(article => ({
-              id: `brk-${article.id}`,
-              title: article.title,
-              category: article.category,
-              time: article.date || "अभी-अभी"
-            }));
-            state.tickerIndex = 0;
-            renderTicker();
-          }
+          target.breaking = articles.slice(0, 5).map(article => ({
+            id: "brk-" + article.id,
+            title: article.title,
+            category: article.category,
+            time: article.date || ""
+          }));
+          state.tickerIndex = 0;
+          renderTicker();
           renderNewsFeed();
         }
       }
@@ -219,7 +256,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.warn("Live news sync failed:", e.message);
     }
 
-    // Also fetch Instagram Stories silently.
+    // Keep Instagram stories independent from the selected news language.
     try {
       const instaRes = await fetch("data/instagram-stories.json?t=" + Date.now(), { cache: "no-store" });
       if (instaRes.ok) {
@@ -233,8 +270,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
       }
     } catch (e) {
-      // Keep the news feed working even if Instagram sync is unavailable.
+      // Keep the news feed working even if Instagram is unavailable.
     }
+  }
+
+  function changeNewsLanguage(language) {
+    if (!["hi", "hinglish", "en"].includes(language)) return;
+    state.currentLanguage = language;
+    localStorage.setItem("news5_language", language);
+    silentBackgroundSync().then(() => {
+      const labels = { hi: "हिन्दी", hinglish: "Hinglish", en: "English" };
+      showToast(labels[language] + " news selected");
+    });
   }
 
   /* ==========================================================================
@@ -750,7 +797,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const textToRead = `${state.currentArticle.title}। ${state.currentArticle.bullets ? state.currentArticle.bullets.join("। ") : ""}। ${stripHtml(state.currentArticle.content || state.currentArticle.excerpt || "")}`;
 
     const utterance = new SpeechSynthesisUtterance(textToRead);
-    utterance.lang = "hi-IN";
+    utterance.lang = state.currentLanguage === "en" ? "en-IN" : "hi-IN";
     utterance.rate = 0.95;
 
     const voices = window.speechSynthesis.getVoices();
@@ -848,6 +895,12 @@ document.addEventListener("DOMContentLoaded", () => {
      14. Event Listeners Setup
      ========================================================================== */
   function initEventListeners() {
+    // News language selector
+    if (elements.newsLanguageSelect) {
+      elements.newsLanguageSelect.value = state.currentLanguage;
+      elements.newsLanguageSelect.addEventListener("change", event => changeNewsLanguage(event.target.value));
+    }
+
     // Theme toggle
     elements.themeToggleBtn.addEventListener("click", toggleTheme);
 
