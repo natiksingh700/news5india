@@ -1021,8 +1021,8 @@ function startServer(portToTry) {
     console.log(`🚀 News5Indiaa Server is LIVE & ACTIVE!`);
     console.log(`👉 Browser me kholein: http://localhost:${portToTry}`);
     console.log(`✨ 24x7 Real News Engine: ${FEED_CONFIG.length} feeds, every 5 minutes`);
-    console.log(`📰 Categories: देश, विश्व, राज्य, मनोरंजन/OTT, खेल, बिज़नेस, टेक, राजनीति`);
-    console.log(`🏙️ States: UP, Delhi NCR, Bihar, MP, Rajasthan`);
+    console.log(`📰 Coverage: National, World, Politics, Crime, Sports, Movies, OTT, TV Shows, Business, Tech, Education, Jobs, Health, Auto, Agriculture and more`);
+    console.log(`🏙️ Editions: Uttar Pradesh, Delhi NCR, Bihar, MP, Rajasthan and 16 additional state editions`);
     console.log(`======================================================\n`);
   });
 }
