@@ -291,6 +291,49 @@ const FEED_CONFIG = [
 ];
 
 // ─── Fetch Utility (follows redirects) ────────────────────────────────────────
+
+const publisherImageCache = new Map();
+
+async function getPublisherImage(articleUrl) {
+  if (!articleUrl || !/^https:\/\//i.test(articleUrl)) return '';
+  if (publisherImageCache.has(articleUrl)) return publisherImageCache.get(articleUrl);
+  try {
+    const html = await fetchRaw(articleUrl);
+    const patterns = [
+      /<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i,
+      /<meta[^>]+name=["']twitter:image(?::src)?["'][^>]+content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image(?::src)?["']/i
+    ];
+    let image = '';
+    for (const pattern of patterns) {
+      const match = html.match(pattern);
+      if (match && match[1]) { image = cleanHtmlEntities(match[1].trim()); break; }
+    }
+    if (image.startsWith('//')) image = 'https:' + image;
+    if (!/^https:\/\//i.test(image) || /\.(?:svg|gif)(?:[?#]|$)/i.test(image)) image = '';
+    publisherImageCache.set(articleUrl, image);
+    if (publisherImageCache.size > 600) publisherImageCache.delete(publisherImageCache.keys().next().value);
+    return image;
+  } catch {
+    publisherImageCache.set(articleUrl, '');
+    return '';
+  }
+}
+
+async function enrichPublisherImages(articles, maxItems = 24, concurrency = 4) {
+  const targets = articles.filter(item => !item.image || !/^https:\/\//i.test(item.image)).slice(0, maxItems);
+  let cursor = 0;
+  const workers = Array.from({length: Math.min(concurrency, targets.length)}, async () => {
+    while (cursor < targets.length) {
+      const item = targets[cursor++];
+      const image = await getPublisherImage(item.articleUrl);
+      if (image) item.image = image;
+    }
+  });
+  await Promise.all(workers);
+}
+
 function fetchRaw(url) {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => reject(new Error('Timeout')), 9000);
@@ -542,6 +585,7 @@ async function runNewsUpdate(language = 'hi') {
   if (allArticles.length > 0) {
     // Put the newest RSS publication first so the homepage lead and ticker are current.
     allArticles.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
+    await enrichPublisherImages(allArticles, 24, 4);
     const payload = {
       lastUpdated: new Date().toISOString(),
       totalArticles: allArticles.length,
@@ -749,15 +793,15 @@ function buildEpaperHtml(language = 'hi') {
   }
   const articleCard = (item, index, featured = false) => {
     const image = item.image && /^https:\/\//i.test(item.image)
-      ? '<img src="' + esc(item.image) + '" alt="" class="story-image">'
-      : '';
+      ? '<img src="' + esc(item.image) + '" alt="' + esc(item.title) + '" class="story-image" loading="lazy">'
+      : '<div class="story-image-placeholder">' + esc(item.category || (text ? 'NEWS' : 'समाचार')) + '</div>';
     const source = item.source ? '<span class="source">' + esc(item.source) + '</span>' : '';
     const excerpt = item.excerpt && item.excerpt !== item.title ? item.excerpt : '';
     const link = item.articleUrl && /^https:\/\//i.test(item.articleUrl)
       ? '<a class="source-link" href="' + esc(item.articleUrl) + '">' + (text ? 'Read source report' : 'मूल खबर पढ़ें') + ' ↗</a>'
       : '';
     return '<article class="story ' + (featured ? 'featured' : '') + '">' +
-      (featured ? image : '') +
+      image +
       '<div class="story-kicker">' + esc(item.category || '') + (item.stateName ? ' · ' + esc(item.stateName) : '') + '</div>' +
       '<h2>' + esc(item.title) + '</h2>' +
       (excerpt ? '<p>' + esc(excerpt) + '</p>' : '') +
@@ -772,8 +816,8 @@ function buildEpaperHtml(language = 'hi') {
     ? 'No verified fresh headlines are available for this edition yet. Please check again after the next news update.'
     : 'इस समय सत्यापित ताज़ा खबरें उपलब्ध नहीं हैं। अगली न्यूज़ अपडेट के बाद दोबारा देखें।') + '</div>';
   return '<!doctype html><html lang="' + (text ? 'en' : 'hi') + '"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>' + title + ' — ' + dateSlug + '</title><style>' +
-  '*{box-sizing:border-box}body{margin:0;background:#e9edf2;color:#171717;font-family:Georgia,"Noto Serif Devanagari","Nirmala UI",serif}.toolbar{position:sticky;top:0;z-index:5;display:flex;justify-content:center;gap:12px;padding:12px;background:#171d29}.toolbar button{border:0;border-radius:6px;padding:11px 18px;font:700 14px Arial,sans-serif;cursor:pointer}.print{background:#c8102e;color:white}.back{background:#fff;color:#171d29}.paper{width:min(1100px,calc(100% - 28px));margin:22px auto;background:#fff;padding:32px 38px;box-shadow:0 8px 35px #18202d18}.masthead{text-align:center;border-bottom:4px double #171717;padding-bottom:15px}.brand{font:900 42px Arial,sans-serif;letter-spacing:1px;color:#bd1424}.tagline{font:700 12px Arial,sans-serif;letter-spacing:2px;margin-top:5px}.edition{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #222;border-bottom:1px solid #222;padding:8px 0;margin-top:14px;font:700 12px Arial,sans-serif}.front-label{text-align:center;font:900 12px Arial,sans-serif;letter-spacing:2px;color:#bd1424;margin:18px 0 10px}.lead{display:grid;grid-template-columns:1.05fr .95fr;gap:22px;padding-bottom:18px;border-bottom:3px solid #171717}.lead .story-image{width:100%;height:265px;object-fit:cover}.story-kicker{font:800 11px Arial,sans-serif;color:#bd1424;text-transform:uppercase;margin:5px 0}.story h2{font-size:20px;line-height:1.28;margin:5px 0 8px}.lead h2{font-size:30px;line-height:1.16}.story p{font-size:13px;line-height:1.55;margin:6px 0}.story-meta{display:flex;justify-content:space-between;gap:8px;font:11px Arial,sans-serif;color:#666;margin-top:9px}.source{font-weight:700}.source-link{display:inline-block;margin-top:8px;font:700 11px Arial,sans-serif;color:#bd1424;text-decoration:none}.desk{margin-top:20px;break-inside:avoid}.desk-title{font:900 18px Arial,sans-serif;border-bottom:2px solid #bd1424;padding:0 0 7px;margin:0 0 12px}.desk-grid{columns:3;column-gap:22px}.desk .story{display:inline-block;width:100%;break-inside:avoid;border-bottom:1px solid #bbb;padding:0 0 12px;margin:0 0 12px}.desk .story h2{font-size:16px}.desk .story p{font-size:12px}.no-news{padding:45px 20px;text-align:center;border:1px dashed #aaa;font:16px Arial,sans-serif;margin-top:20px}.footer{text-align:center;border-top:3px double #171717;padding-top:10px;margin-top:25px;font:11px Arial,sans-serif;color:#555}.notice{text-align:center;font:11px Arial,sans-serif;color:#666;margin:12px 0}.toolbar-note{color:#fff;font:12px Arial,sans-serif;align-self:center}@page{size:A3 portrait;margin:12mm}@media print{body{background:#fff}.toolbar{display:none}.paper{width:100%;margin:0;padding:0;box-shadow:none}.lead,.desk,.story{break-inside:avoid}.desk-grid{columns:3}.source-link{color:#333;text-decoration:underline}a{color:#111}}@media(max-width:700px){.paper{width:100%;margin:0;padding:18px}.brand{font-size:31px}.lead{grid-template-columns:1fr}.lead h2{font-size:25px}.lead .story-image{height:210px}.desk-grid{columns:2}.edition{font-size:10px}}' +
-  '</style></head><body><div class="toolbar"><button class="print" onclick="window.print()">⬇ ' + (text ? 'Download / Print PDF' : 'PDF डाउनलोड / प्रिंट करें') + '</button><button class="back" onclick="history.back()">' + (text ? 'Back to website' : 'वेबसाइट पर वापस जाएं') + '</button><span class="toolbar-note">' + (text ? 'Choose “Save as PDF” in the print window' : 'प्रिंट विंडो में “Save as PDF” चुनें') + '</span></div><main class="paper"><header class="masthead"><div class="brand">NEWS 5 INDIA</div><div class="tagline">' + (text ? 'EVERY STORY. EVERY SIDE.' : 'हर खबर, आपके साथ') + '</div><div class="edition"><span>' + (text ? 'DAILY NATIONAL EDITION' : 'दैनिक राष्ट्रीय संस्करण') + '</span><span>' + esc(today) + '</span><span>' + (text ? 'PRICE ₹5' : 'मूल्य ₹5') + '</span></div></header>' +
+  '*{box-sizing:border-box}body{margin:0;background:#e9edf2;color:#171717;font-family:Georgia,"Noto Serif Devanagari","Nirmala UI",serif}.toolbar{position:sticky;top:0;z-index:5;display:flex;justify-content:center;gap:12px;padding:12px;background:#171d29}.toolbar button{border:0;border-radius:6px;padding:11px 18px;font:700 14px Arial,sans-serif;cursor:pointer}.print{background:#c8102e;color:white}.back{background:#fff;color:#171d29}.paper{width:min(1100px,calc(100% - 28px));margin:22px auto;background:#fff;padding:32px 38px;box-shadow:0 8px 35px #18202d18}.masthead{text-align:center;border-bottom:4px double #171717;padding-bottom:15px}.brand{display:flex;align-items:center;justify-content:center;gap:12px;font:900 42px Arial,sans-serif;letter-spacing:1px;color:#bd1424}.paper-logo{width:58px;height:58px;object-fit:contain}.story-image-placeholder{height:110px;display:flex;align-items:center;justify-content:center;background:#eef1f5;color:#667085;font:700 12px Arial,sans-serif;letter-spacing:1px;border:1px solid #dfe3e9}.tagline{font:700 12px Arial,sans-serif;letter-spacing:2px;margin-top:5px}.edition{display:flex;justify-content:space-between;gap:12px;border-top:1px solid #222;border-bottom:1px solid #222;padding:8px 0;margin-top:14px;font:700 12px Arial,sans-serif}.front-label{text-align:center;font:900 12px Arial,sans-serif;letter-spacing:2px;color:#bd1424;margin:18px 0 10px}.lead{display:grid;grid-template-columns:1.05fr .95fr;gap:22px;padding-bottom:18px;border-bottom:3px solid #171717}.lead .story-image{width:100%;height:265px;object-fit:cover}.story-kicker{font:800 11px Arial,sans-serif;color:#bd1424;text-transform:uppercase;margin:5px 0}.story h2{font-size:20px;line-height:1.28;margin:5px 0 8px}.lead h2{font-size:30px;line-height:1.16}.story p{font-size:13px;line-height:1.55;margin:6px 0}.story-meta{display:flex;justify-content:space-between;gap:8px;font:11px Arial,sans-serif;color:#666;margin-top:9px}.source{font-weight:700}.source-link{display:inline-block;margin-top:8px;font:700 11px Arial,sans-serif;color:#bd1424;text-decoration:none}.desk{margin-top:20px;break-inside:avoid}.desk-title{font:900 18px Arial,sans-serif;border-bottom:2px solid #bd1424;padding:0 0 7px;margin:0 0 12px}.desk-grid{columns:3;column-gap:22px}.desk .story{display:inline-block;width:100%;break-inside:avoid;border-bottom:1px solid #bbb;padding:0 0 12px;margin:0 0 12px}.desk .story .story-image{width:100%;height:110px;object-fit:cover;margin:0 0 7px}.desk .story h2{font-size:16px}.desk .story p{font-size:12px}.no-news{padding:45px 20px;text-align:center;border:1px dashed #aaa;font:16px Arial,sans-serif;margin-top:20px}.footer{text-align:center;border-top:3px double #171717;padding-top:10px;margin-top:25px;font:11px Arial,sans-serif;color:#555}.notice{text-align:center;font:11px Arial,sans-serif;color:#666;margin:12px 0}.toolbar-note{color:#fff;font:12px Arial,sans-serif;align-self:center}@page{size:A3 portrait;margin:12mm}@media print{body{background:#fff}.toolbar{display:none}.paper{width:100%;margin:0;padding:0;box-shadow:none}.lead,.desk,.story{break-inside:avoid}.desk-grid{columns:3}.source-link{color:#333;text-decoration:underline}a{color:#111}}@media(max-width:700px){.paper{width:100%;margin:0;padding:18px}.brand{font-size:31px}.lead{grid-template-columns:1fr}.lead h2{font-size:25px}.lead .story-image{height:210px}.paper-logo{width:46px;height:46px}.desk-grid{columns:2}.edition{font-size:10px}}' +
+  '</style></head><body><div class="toolbar"><button class="print" onclick="window.print()">⬇ ' + (text ? 'Download / Print PDF' : 'PDF डाउनलोड / प्रिंट करें') + '</button><button class="back" onclick="history.back()">' + (text ? 'Back to website' : 'वेबसाइट पर वापस जाएं') + '</button><span class="toolbar-note">' + (text ? 'Choose “Save as PDF” in the print window' : 'प्रिंट विंडो में “Save as PDF” चुनें') + '</span></div><main class="paper"><header class="masthead"><div class="brand"><img class="paper-logo" src="/assets/logo-badge.jpg" alt="News5India logo">NEWS 5 INDIA</div><div class="tagline">' + (text ? 'EVERY STORY. EVERY SIDE.' : 'हर खबर, आपके साथ') + '</div><div class="edition"><span>' + (text ? 'DAILY NATIONAL EDITION' : 'दैनिक राष्ट्रीय संस्करण') + '</span><span>' + esc(today) + '</span><span>' + (text ? 'PRICE ₹5' : 'मूल्य ₹5') + '</span></div></header>' +
   (articles.length ? '<div class="front-label">' + (text ? 'TODAY’S TOP STORY' : 'आज की सबसे बड़ी खबर') + '</div><section class="lead">' + articleCard(lead,0,true) + (articles[1] ? articleCard(articles[1],1) : '') + '</section>' + sections : noNews) +
   '<div class="notice">' + (text ? 'Headlines and summaries are based on the linked publisher reports. Read original sources for full coverage.' : 'समाचारों के शीर्षक और संक्षेप संबंधित प्रकाशकों की रिपोर्ट पर आधारित हैं। विस्तृत जानकारी के लिए मूल स्रोत पढ़ें।') + '</div><footer class="footer">NEWS 5 INDIA MEDIA NETWORK · ' + esc(today) + ' · ' + (articles.length ? articles.length : 0) + ' ' + (text ? 'verified headlines' : 'सत्यापित सुर्खियां') + '</footer></main></body></html>';
 }
