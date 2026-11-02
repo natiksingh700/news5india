@@ -591,7 +591,17 @@ document.addEventListener("DOMContentLoaded", () => {
       agriculture: "कृषि", environment: "पर्यावरण", breaking: "बड़ी खबर",
       videos: "वीडियो", webstories: "वेब स्टोरीज़"
     };
-    return map[slug] || slug;
+    const englishMap = {
+      national: "National", world: "World", state: "State / City", politics: "Politics",
+      sports: "Sports", entertainment: "Entertainment", movies: "Movies", ott: "Web Series / OTT",
+      trailers: "Trailers", boxoffice: "Box Office", business: "Business", tech: "Technology",
+      ai: "AI & Tech", gadgets: "Gadgets", gaming: "Gaming", auto: "Auto & EV",
+      science: "Science", education: "Education", jobs: "Jobs", health: "Health",
+      weather: "Weather", agriculture: "Agriculture", environment: "Environment",
+      breaking: "Breaking News", videos: "Videos", webstories: "Web Stories"
+    };
+    const value = state.currentLanguage === "en" ? (englishMap[slug] || map[slug] || slug) : (map[slug] || slug);
+    return state.currentLanguage === "hinglish" ? romanizeHindiText(value) : value;
   }
 
   function getStateName(slug) {
@@ -602,7 +612,9 @@ document.addEventListener("DOMContentLoaded", () => {
       mp: "मध्य प्रदेश",
       rajasthan: "राजस्थान"
     };
-    return map[slug] || slug;
+    const englishMap = { up: "Uttar Pradesh", bihar: "Bihar", delhi: "Delhi", mp: "Madhya Pradesh", rajasthan: "Rajasthan" };
+    const value = state.currentLanguage === "en" ? (englishMap[slug] || map[slug] || slug) : (map[slug] || slug);
+    return state.currentLanguage === "hinglish" ? romanizeHindiText(value) : value;
   }
 
   function resetAllFilters() {
