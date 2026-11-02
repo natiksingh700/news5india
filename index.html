@@ -156,6 +156,7 @@
         <li class="nav-item"><button type="button" class="nav-link" data-category="world">दुनिया</button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-category="movies">फिल्में</button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-category="ott">वेब सीरीज़ / OTT</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="tv">टीवी शो / सीरियल</button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-category="trailers">ट्रेलर</button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-category="boxoffice">बॉक्स ऑफिस</button></li>
         <li class="nav-item"><button type="button" class="nav-link" data-category="science">विज्ञान</button></li>
@@ -263,6 +264,10 @@
         <article class="lead-card" id="leadStoryContainer">
           <!-- Injected dynamically -->
         </article>
+        <section class="top-headlines-panel" aria-label="आज की प्रमुख खबरें">
+          <div class="top-headlines-heading"><h2>आज की टॉप खबरें</h2><span id="newsRefreshStatus" class="news-refresh-status">खबरें अपडेट हो रही हैं…</span></div>
+          <div id="topHeadlines" class="top-headlines-list"></div>
+        </section>
 
         <!-- Full category coverage: independently populated from verified fresh-news feeds -->
         <section class="category-desk-section" id="categoryDeskSection" aria-label="सभी श्रेणियों की ताज़ा खबरें">
