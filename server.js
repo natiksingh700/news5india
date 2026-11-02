@@ -298,7 +298,7 @@ async function getPublisherImage(articleUrl) {
   if (!articleUrl || !/^https:\/\//i.test(articleUrl)) return '';
   if (publisherImageCache.has(articleUrl)) return publisherImageCache.get(articleUrl);
   try {
-    const html = await fetchRaw(articleUrl);
+    const html = await fetchRaw(articleUrl, 4500);
     const patterns = [
       /<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i,
       /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i,
@@ -322,25 +322,29 @@ async function getPublisherImage(articleUrl) {
 }
 
 async function enrichPublisherImages(articles, maxItems = 24, concurrency = 4) {
-  const targets = articles.filter(item => item.articleUrl && (item.imageSource === 'fallback' || !item.image || !/^https:\/\//i.test(item.image))).slice(0, maxItems);
+  const targets = articles.filter(item => item.articleUrl && (
+    item.imageSource === 'fallback' || !item.image || !/^https:\/\//i.test(item.image) ||
+    /(?:^|\\.)google(?:usercontent|apis|\.com)|gstatic\\.com|news\\.google\\.com/i.test(String(item.image || ''))
+  )).slice(0, maxItems);
   let cursor = 0;
   const workers = Array.from({length: Math.min(concurrency, targets.length)}, async () => {
     while (cursor < targets.length) {
       const item = targets[cursor++];
       const image = await getPublisherImage(item.articleUrl);
       if (image) { item.image = image; item.imageSource = 'publisher'; }
+      else if (/(?:^|\\.)google(?:usercontent|apis|\\.com)|gstatic\\.com|news\\.google\\.com/i.test(String(item.image || ''))) { item.image = ''; item.imageSource = 'fallback'; }
     }
   });
   await Promise.all(workers);
 }
 
-function fetchRaw(url) {
+function fetchRaw(url, timeoutMs = 9000) {
   return new Promise((resolve, reject) => {
-    const timeout = setTimeout(() => reject(new Error('Timeout')), 9000);
+    const timeout = setTimeout(() => reject(new Error('Timeout')), timeoutMs);
     https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         clearTimeout(timeout);
-        return resolve(fetchRaw(res.headers.location));
+        return resolve(fetchRaw(res.headers.location, timeoutMs));
       }
       let data = '';
       res.on('data', chunk => data += chunk);
@@ -576,7 +580,7 @@ async function runNewsUpdate(language = 'hi') {
   if (allArticles.length > 0) {
     // Put the newest RSS publication first so the homepage lead and ticker are current.
     allArticles.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-    await enrichPublisherImages(allArticles, 36, 5);
+    await enrichPublisherImages(allArticles, 120, 12);
     const payload = {
       lastUpdated: new Date().toISOString(),
       totalArticles: allArticles.length,
