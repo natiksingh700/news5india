@@ -516,22 +516,30 @@ function stripAllHtml(str) {
 
 function extractRssImage(itemXml) {
   const candidates = [];
-  const mediaTags = itemXml.match(/<(?:media:content|media:thumbnail|enclosure)\b[^>]*>/gi) || [];
+  // Google News often wraps the publisher's HTML thumbnail in escaped CDATA.
+  const decodedItem = cleanHtmlEntities(String(itemXml || ''));
+  const mediaTags = decodedItem.match(/<(?:media:content|media:thumbnail|enclosure)\b[^>]*>/gi) || [];
   for (const tag of mediaTags) {
     const url = (tag.match(/\burl\s*=\s*["']([^"']+)["']/i) || [])[1];
     const type = (tag.match(/\btype\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
     if (url && (!type || /^image\//i.test(type))) candidates.push(url);
   }
-  const htmlImageTags = itemXml.match(/<img\b[^>]*>/gi) || [];
+  const htmlImageTags = decodedItem.match(/<img\b[^>]*>/gi) || [];
   for (const tag of htmlImageTags) {
-    const srcMatch = tag.match(/\b(?:src|data-src|data-original|data-lazy-src)\s*=\s*["']([^"']+)["']/i);
-    const srcsetMatch = tag.match(/\bsrcset\s*=\s*["']([^"']+)["']/i);
-    if (srcMatch) candidates.push(srcMatch[1]);
-    if (srcsetMatch) candidates.push(srcsetMatch[1].split(',')[0].trim().split(/\s+/)[0]);
+    for (const attr of ['src','data-src','data-original','data-lazy-src','data-original-src','data-url']) {
+      const match = tag.match(new RegExp('\\b' + attr + '\\s*=\\s*["\\']([^"\\']+)["\\']','i'));
+      if (match) candidates.push(match[1]);
+    }
+    const srcsetMatch = tag.match(/\b(?:srcset|data-srcset)\s*=\s*["']([^"']+)["']/i);
+    if (srcsetMatch) candidates.push(srcsetMatch[1].split(',').pop().trim().split(/\s+/)[0]);
   }
+  // Some feeds expose a thumbnail as a link in their description rather than an img.
+  const imageLinks = decodedItem.match(/https?:[^"'\\s<>]+?\.(?:jpe?g|png|webp)(?:\?[^"'\\s<>]*)?/gi) || [];
+  candidates.push(...imageLinks);
   for (let candidate of candidates) {
     candidate = cleanHtmlEntities(String(candidate).trim()).replace(/&amp;/g, '&');
-    if (/^https?:\/\//i.test(candidate) && !isGenericNewsImageUrl(candidate)) return candidate;
+    try { candidate = new URL(candidate, 'https://news.google.com/').href; } catch { continue; }
+    if (/^https:\/\//i.test(candidate) && !isGenericNewsImageUrl(candidate) && !/\.(?:svg|gif)(?:[?#]|$)/i.test(candidate)) return candidate;
   }
   return '';
 }
@@ -702,7 +710,7 @@ async function runNewsUpdate(language = 'hi') {
   if (allArticles.length > 0) {
     // Put the newest RSS publication first so the homepage lead and ticker are current.
     allArticles.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-    await enrichPublisherImages(allArticles, 240, 14);
+    await enrichPublisherImages(allArticles, 420, 18);
     const payload = {
       lastUpdated: new Date().toISOString(),
       totalArticles: allArticles.length,
@@ -1016,6 +1024,55 @@ function startServer(portToTry) {
         console.error('[Search] Failed:', err.message);
         return json(res, 502, { error: 'अभी खोज उपलब्ध नहीं है। थोड़ी देर बाद कोशिश करें।', articles: [] });
       }
+    }
+    if (pathname === '/api/news/more' && req.method === 'GET') {
+      const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
+      const page = Math.max(0, Math.min(50, Number.parseInt(parsedUrl.searchParams.get('page') || '0', 10) || 0));
+      const activeFeeds = feedsForLanguage(language);
+      const batchSize = 12;
+      const start = (page * batchSize) % activeFeeds.length;
+      const batch = Array.from({length: Math.min(batchSize, activeFeeds.length)}, (_,i) => activeFeeds[(start+i)%activeFeeds.length]);
+      const seen = new Set();
+      const articles = [];
+      await Promise.all(batch.map(async feed => {
+        try {
+          const feedUrl = new URL(feed.url);
+          feedUrl.searchParams.set('start', String((page + 1) * 10));
+          const raw = await fetchRaw(feedUrl.href, 9000);
+          const items = parseXmlItems(raw, Math.max(feed.maxItems * 10, 40))
+            .filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) &&
+              isRecentArticle(item.pubDate) && !requiresEditorialReview(item));
+          for (const item of items) {
+            const key = String(item.title || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g,'').slice(0,110);
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            const article = {
+              id: 'more-' + Buffer.from(key).toString('base64url').slice(0,36),
+              title: String(item.title || '').replace(/\uFFFD/g,'').trim(),
+              excerpt: String(item.description || item.title || '').replace(/\uFFFD/g,'').trim(),
+              category: feed.category,
+              categorySlug: feed.categorySlug,
+              author: feed.author + (item.source ? ' (' + item.source + ')' : ''),
+              date: language === 'en' ? new Date(item.pubDate).toLocaleString('en-IN',{dateStyle:'medium',timeStyle:'short',timeZone:'Asia/Kolkata'}) : formatHindiTime(item.pubDate),
+              publishedAt: item.pubDate,
+              source: item.source,
+              articleUrl: item.articleUrl,
+              readTime: language === 'en' ? '2 min' : '2 मिनट',
+              image: item.imageUrl && !isGenericNewsImageUrl(item.imageUrl) ? item.imageUrl : '',
+              imageSource: item.imageUrl ? 'rss' : 'fallback',
+              views: '—',
+              content: '<p><strong>' + escapeEpaperHtml(item.source || 'समाचार स्रोत') + ' से प्राप्त रिपोर्ट:</strong> ' + escapeEpaperHtml(item.title || '') + '</p><p>' + escapeEpaperHtml(item.description || item.title || '') + '</p><p>पूरी जानकारी के लिए मूल प्रकाशक की रिपोर्ट पढ़ें।</p>'
+            };
+            if (feed.state) { article.state = feed.state; article.stateName = feed.stateName; }
+            articles.push(article);
+          }
+        } catch (err) {
+          console.warn('[News more] Feed skipped:', feed.category, err.message);
+        }
+      }));
+      articles.sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
+      await enrichPublisherImages(articles, 48, 10);
+      return json(res,200,{page,articles,totalArticles:articles.length,hasMore:articles.length>0});
     }
     if (pathname === '/api/news' && req.method === 'GET') {
       const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
