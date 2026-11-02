@@ -805,8 +805,10 @@
     <h2>🔒 News5India Admin Panel</h2>
     <section class="n5-ad-manager" aria-labelledby="n5AdHeading">
       <h3 id="n5AdHeading">📢 Sticky Sidebar Advertisement</h3>
-      <p>यह विज्ञापन वेबसाइट के दाईं तरफ scroll करते समय sticky दिखाई देगा। नया विज्ञापन अपलोड करने पर पुराना active विज्ञापन replace हो जाएगा।</p>
+      <p>अधिकतम 3 विज्ञापन स्लॉट हैं। खाली स्लॉट में नया विज्ञापन जोड़ें या किसी भरे स्लॉट को चुनकर उसी का विज्ञापन बदलें।</p>
       <form id="n5AdForm" class="n5-reel-form">
+        <label for="n5AdSlot">Ad Slot चुनें (1 से 3) *</label>
+        <select id="n5AdSlot" required><option value="1">Ad Slot 1</option><option value="2">Ad Slot 2</option><option value="3">Ad Slot 3</option></select>
         <label for="n5AdTitle">विज्ञापन / ब्रांड का नाम *</label><input id="n5AdTitle" required maxlength="140" placeholder="जैसे: XYZ Showroom का ऑफर">
         <label for="n5AdSponsor">Advertiser / Sponsor का नाम</label><input id="n5AdSponsor" maxlength="100" placeholder="जैसे: XYZ Motors">
         <label for="n5AdImage">विज्ञापन की फोटो अपलोड करें * (PNG, JPG, WEBP • अधिकतम 2.5 MB)</label><input id="n5AdImage" type="file" accept="image/png,image/jpeg,image/webp" required>
