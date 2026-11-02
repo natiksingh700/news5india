@@ -361,7 +361,7 @@ const TRUSTED_PUBLISHER_PATTERNS = [
   "the wire", "deccan herald", "the telegraph", "india tv", "pib",
   "दैनिक जागरण", "अमर उजाला", "हिन्दुस्तान", "आज तक", "एबीपी न्यूज़",
   "एनडीटीवी", "इंडिया टीवी", "बीबीसी हिंदी", "पीटीआई", "एएनआई", "न्यूज़18", "ज़ी न्यूज़",
-  "bollywood hungama", "pinkvilla", "filmibeat", "koimoi", "variety", "deadline",
+  "bollywood hungama", "pinkvilla", "filmibeat", "koimoi", "tellychakkar", "india forums", "bollywood life", "variety", "deadline", "people", "cnn", "the guardian", "al jazeera", "sky news", "nbc news", "cbs news", "abc news", "the washington post", "new york times", "forbes", "techcrunch", "the verge", "wired", "the associated press",
   "hollywood reporter", "gadgets 360", "91mobiles", "gsmarena", "ign", "autocar india",
   "carandbike", "imdb", "espn", "cricbuzz", "the hindu businessline", "financial express",
   "careers360", "indian express education", "down to earth", "weather.com", "imd"
@@ -576,7 +576,7 @@ async function runNewsUpdate(language = 'hi') {
   if (allArticles.length > 0) {
     // Put the newest RSS publication first so the homepage lead and ticker are current.
     allArticles.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-    await enrichPublisherImages(allArticles, 24, 4);
+    await enrichPublisherImages(allArticles, 36, 5);
     const payload = {
       lastUpdated: new Date().toISOString(),
       totalArticles: allArticles.length,
@@ -871,7 +871,7 @@ function startServer(portToTry) {
           });
         }
         articles.sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
-        await enrichPublisherImages(articles, 24, 4);
+        await enrichPublisherImages(articles, 30, 5);
         return json(res, 200, { query, totalArticles: articles.length, articles });
       } catch (err) {
         console.error('[Search] Failed:', err.message);
