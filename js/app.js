@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     leadStoryContainer: document.getElementById("leadStoryContainer"),
     stateChips: document.getElementById("stateChips"),
     newsCardsGrid: document.getElementById("newsCardsGrid"),
+    categoryShelves: document.getElementById("categoryShelves"),
     webStoriesTrack: document.getElementById("webStoriesTrack"),
     videoGrid: document.getElementById("videoGrid"),
     trendingList: document.getElementById("trendingList"),
@@ -599,6 +600,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderNewsFeed() {
     if (!elements.newsCardsGrid) return;
     const filtered = getFilteredArticles();
+    renderCategoryShelves();
 
     if (elements.filterHeader) {
       if (state.currentCategory !== "all" || state.currentState !== "all" || state.searchQuery) {
@@ -652,6 +654,66 @@ document.addEventListener("DOMContentLoaded", () => {
         const id = card.getAttribute("data-article-id");
         const found = NEWS_DATA.articles.find(a => a.id === id);
         if (found) openArticleModal(found);
+      });
+    });
+  }
+
+  function renderCategoryShelves() {
+    const host = elements.categoryShelves;
+    if (!host) return;
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    const articles = data && Array.isArray(data.articles) ? data.articles : [];
+    const showHomeShelves = state.currentCategory === "all" && state.currentState === "all" && !state.searchQuery;
+    host.parentElement.hidden = !showHomeShelves;
+    if (!showHomeShelves) return;
+    const desks = [
+      ["national","देश की खबरें"],["state","राज्य और शहर"],["politics","राजनीति"],
+      ["world","दुनिया"],["crime","अपराध"],["sports","खेल"],
+      ["business","बिज़नेस और बाजार"],["entertainment","मनोरंजन"],
+      ["tech","टेक्नोलॉजी और AI"],["education","शिक्षा और परीक्षा"],
+      ["jobs","नौकरी और करियर"],["health","हेल्थ"],
+      ["weather","मौसम"],["agriculture","कृषि और किसान"],
+      ["auto","ऑटो और EV"],["science","विज्ञान और अंतरिक्ष"],
+      ["religion","धर्म और आस्था"],["lifestyle","लाइफस्टाइल"],
+      ["law","कानून और कोर्ट"],["defense","डिफेंस"],
+      ["factcheck","फैक्ट चेक"],["finance","पर्सनल फाइनेंस"],
+      ["markets","सोना-चांदी और बाजार"],["travel","यात्रा और पर्यटन"],
+      ["trending","वायरल और ट्रेंडिंग"],["ground","ग्राउंड रिपोर्ट"],
+      ["women","महिला जगत"],["governance","सरकार और नीति"]
+    ];
+    const sections = desks.map(([slug,label]) => {
+      const items = articles.filter(item => item.categorySlug === slug).slice(0,3);
+      if (!items.length) return "";
+      return `
+        <section class="category-shelf" data-shelf="${slug}">
+          <div class="category-shelf-head">
+            <h3>${label}</h3>
+            <button type="button" class="category-shelf-more" data-open-category="${slug}">और खबरें देखें ›</button>
+          </div>
+          <div class="category-shelf-grid">
+            ${items.map(item => `
+              <article class="category-shelf-card" data-shelf-article="${item.id}">
+                <img src="${item.image || ''}" alt="" loading="lazy">
+                <div class="category-shelf-copy">
+                  <span class="category-shelf-meta">${item.stateName ? item.stateName + ' · ' : ''}${item.date || ''}</span>
+                  <h4>${item.title}</h4>
+                  <p>${item.excerpt || ''}</p>
+                </div>
+              </article>`).join("")}
+          </div>
+        </section>`;
+    }).filter(Boolean);
+    host.innerHTML = sections.length ? sections.join("") : '<p class="category-shelf-empty">अलग-अलग श्रेणियों की ताज़ा खबरें उपलब्ध होते ही यहाँ दिखाई देंगी।</p>';
+    host.querySelectorAll("[data-shelf-article]").forEach(card => {
+      card.addEventListener("click", () => {
+        const item = articles.find(article => article.id === card.getAttribute("data-shelf-article"));
+        if (item) openArticleModal(item);
+      });
+    });
+    host.querySelectorAll("[data-open-category]").forEach(button => {
+      button.addEventListener("click", () => {
+        const link = elements.categoryNav && elements.categoryNav.querySelector('[data-category="' + button.dataset.openCategory + '"]');
+        if (link) link.click();
       });
     });
   }
