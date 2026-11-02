@@ -33,6 +33,48 @@ const MIME_TYPES = {
 
 // ─── RSS Feed Config ──────────────────────────────────────────────────────────
 // Each feed: { url, category, categorySlug, state?, stateName?, author, image pool }
+// Extra coverage: entertainment release calendars, technology, civic and public-interest beats.
+// These are RSS discovery feeds; publication still passes the publisher, freshness and review gates below.
+const EXTRA_FEEDS = [
+  { query: '"upcoming movies" OR "release date" India Bollywood Hollywood', category: 'फिल्में', slug: 'entertainment', author: 'News5Indiaa फिल्म डेस्क', maxItems: 3 },
+  { query: '"upcoming web series" OR OTT release date Netflix Prime Video JioHotstar India', category: 'वेब सीरीज़ और OTT', slug: 'entertainment', author: 'News5Indiaa OTT डेस्क', maxItems: 3 },
+  { query: 'movie trailer teaser announcement India cinema', category: 'ट्रेलर और टीज़र', slug: 'entertainment', author: 'News5Indiaa ट्रेलर डेस्क', maxItems: 2 },
+  { query: 'Bollywood Hollywood box office collection film review', category: 'बॉक्स ऑफिस', slug: 'entertainment', author: 'News5Indiaa सिनेमा डेस्क', maxItems: 2 },
+  { query: 'television serial reality show celebrity entertainment India', category: 'टीवी और सेलिब्रिटी', slug: 'entertainment', author: 'News5Indiaa टीवी डेस्क', maxItems: 2 },
+  { query: 'artificial intelligence AI technology India latest', category: 'AI और टेक्नोलॉजी', slug: 'tech', author: 'News5Indiaa AI डेस्क', maxItems: 3 },
+  { query: 'smartphone launch laptop gadget review India', category: 'मोबाइल और गैजेट्स', slug: 'tech', author: 'News5Indiaa गैजेट्स डेस्क', maxItems: 3 },
+  { query: 'cybersecurity data breach software technology India', category: 'साइबर और डिजिटल', slug: 'tech', author: 'News5Indiaa साइबर डेस्क', maxItems: 2 },
+  { query: 'gaming esports game launch gaming industry India', category: 'गेमिंग और ई-स्पोर्ट्स', slug: 'tech', author: 'News5Indiaa गेमिंग डेस्क', maxItems: 2 },
+  { query: 'electric vehicle car bike automobile launch India', category: 'ऑटो और EV', slug: 'tech', author: 'News5Indiaa ऑटो डेस्क', maxItems: 2 },
+  { query: 'ISRO space science research discovery India', category: 'विज्ञान और अंतरिक्ष', slug: 'national', author: 'News5Indiaa साइंस डेस्क', maxItems: 2 },
+  { query: 'school university education exam result admission India', category: 'शिक्षा और परीक्षा', slug: 'national', author: 'News5Indiaa शिक्षा डेस्क', maxItems: 3 },
+  { query: 'government jobs recruitment vacancy admit card result India', category: 'सरकारी नौकरी और भर्ती', slug: 'national', author: 'News5Indiaa जॉब्स डेस्क', maxItems: 3 },
+  { query: 'startup funding business economy markets India', category: 'स्टार्टअप और अर्थव्यवस्था', slug: 'business', author: 'News5Indiaa स्टार्टअप डेस्क', maxItems: 2 },
+  { query: 'health public health medical research India', category: 'स्वास्थ्य समाचार', slug: 'national', author: 'News5Indiaa हेल्थ डेस्क', maxItems: 2 },
+  { query: 'weather monsoon IMD rainfall heatwave India', category: 'मौसम और मानसून', slug: 'national', author: 'News5Indiaa मौसम डेस्क', maxItems: 2 },
+  { query: 'agriculture farmers crop mandi agriculture policy India', category: 'कृषि और किसान', slug: 'national', author: 'News5Indiaa कृषि डेस्क', maxItems: 2 },
+  { query: 'environment climate pollution conservation India', category: 'पर्यावरण', slug: 'national', author: 'News5Indiaa पर्यावरण डेस्क', maxItems: 2 },
+  { query: 'Mathura Vrindavan local news administration police', category: 'मथुरा-वृंदावन', slug: 'state', state: 'up', stateName: 'मथुरा-वृंदावन', author: 'News5Indiaa मथुरा ब्यूरो', maxItems: 3 },
+  { query: 'Agra local news administration police Uttar Pradesh', category: 'आगरा', slug: 'state', state: 'up', stateName: 'आगरा', author: 'News5Indiaa आगरा ब्यूरो', maxItems: 2 }
+];
+
+function buildSearchFeed(feed) {
+  return {
+    url: 'https://news.google.com/rss/search?q=' + encodeURIComponent(feed.query) + '&hl=hi&gl=IN&ceid=IN:hi',
+    category: feed.category,
+    categorySlug: feed.slug,
+    state: feed.state,
+    stateName: feed.stateName,
+    author: feed.author,
+    maxItems: feed.maxItems,
+    images: [
+      'https://images.unsplash.com/photo-1497366754035-f200968a6e72?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=600&auto=format&fit=crop&q=80'
+    ]
+  };
+}
+
 const FEED_CONFIG = [
   // ── National (देश) ──
   {
@@ -210,7 +252,8 @@ const FEED_CONFIG = [
       'https://images.unsplash.com/photo-1555848962-6e79363ec58f?w=600&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1575320181282-9afab399332c?w=600&auto=format&fit=crop&q=80'
     ]
-  }
+  },
+  ...EXTRA_FEEDS.map(buildSearchFeed)
 ];
 
 // ─── Fetch Utility (follows redirects) ────────────────────────────────────────
@@ -240,7 +283,11 @@ const TRUSTED_PUBLISHER_PATTERNS = [
   "moneycontrol", "espncricinfo", "cricbuzz", "the quint", "scroll.in",
   "the wire", "deccan herald", "the telegraph", "india tv", "pib",
   "दैनिक जागरण", "अमर उजाला", "हिन्दुस्तान", "आज तक", "एबीपी न्यूज़",
-  "एनडीटीवी", "इंडिया टीवी", "बीबीसी हिंदी", "पीटीआई", "एएनआई", "न्यूज़18", "ज़ी न्यूज़"
+  "एनडीटीवी", "इंडिया टीवी", "बीबीसी हिंदी", "पीटीआई", "एएनआई", "न्यूज़18", "ज़ी न्यूज़",
+  "bollywood hungama", "pinkvilla", "filmibeat", "koimoi", "variety", "deadline",
+  "hollywood reporter", "gadgets 360", "91mobiles", "gsmarena", "ign", "autocar india",
+  "carandbike", "imdb", "espn", "cricbuzz", "the hindu businessline", "financial express",
+  "careers360", "indian express education", "down to earth", "weather.com", "imd"
 ];
 
 function isTrustedPublisher(source) {
