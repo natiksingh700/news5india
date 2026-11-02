@@ -954,28 +954,41 @@ function startServer(portToTry) {
       const query = String(parsedUrl.searchParams.get('q') || '').trim().slice(0, 120);
       if (query.length < 2) return json(res, 400, { error: 'कम से कम 2 अक्षर लिखें।', articles: [] });
       try {
-        const encoded = encodeURIComponent(query);
-        const urls = [
-          'https://news.google.com/rss/search?q=' + encoded + '&hl=hi&gl=IN&ceid=IN:hi',
-          'https://news.google.com/rss/search?q=' + encoded + '&hl=en-IN&gl=IN&ceid=IN:en',
-          'https://news.google.com/rss/search?q=' + encoded + '&hl=en-US&gl=US&ceid=US:en'
+        // Expand common spellings and entertainment-show names so a search like
+        // "Big Boss" also finds "Bigg Boss" and "बिग बॉस" coverage.
+        const normalized = query.toLowerCase().replace(/\s+/g, ' ').trim();
+        const variants = [query];
+        if (/(big\s*boss|bigg\s*boss|bigboss|बिग\s*बॉस)/i.test(normalized)) {
+          variants.push('Bigg Boss', '"Bigg Boss" latest news India', 'बिग बॉस');
+        } else {
+          variants.push('"' + query.replace(/"/g, '') + '" latest news', query + ' latest updates');
+        }
+        const uniqueVariants = [...new Set(variants)].slice(0, 4);
+        const locales = [
+          { hl:'hi', gl:'IN', ceid:'IN:hi' },
+          { hl:'en-IN', gl:'IN', ceid:'IN:en' },
+          { hl:'en-US', gl:'US', ceid:'US:en' }
         ];
+        const urls = uniqueVariants.flatMap(term => locales.map(locale =>
+          'https://news.google.com/rss/search?q=' + encodeURIComponent(term) +
+          '&hl=' + locale.hl + '&gl=' + locale.gl + '&ceid=' + locale.ceid
+        ));
         const feeds = await Promise.all(urls.map(async url => {
-          try { return parseXmlItems(await fetchRaw(url), 30); } catch (err) {
-            console.warn('[Search] Feed unavailable:', err.message);
-            return [];
-          }
+          try { return parseXmlItems(await fetchRaw(url), 25); }
+          catch (err) { console.warn('[Search] Feed unavailable:', err.message); return []; }
         }));
         const seen = new Set();
         const articles = [];
         for (const item of feeds.flat()) {
-          const key = String(item.title || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, '').slice(0, 90);
+          const key = String(item.title || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, '').slice(0, 100);
           const published = Date.parse(item.pubDate || '');
           const age = Date.now() - published;
-          if (!item.title || !key || seen.has(key) || !isTrustedPublisher(item.source) ||
+          // Search is broader than the homepage feed: Google News already supplies
+          // the publisher; retain source/date/HTTPS checks but don't hide a topic
+          // merely because that publisher isn't in the homepage's fixed allow-list.
+          if (!item.title || !key || seen.has(key) || !String(item.source || '').trim() ||
               !/^https:\/\//i.test(item.articleUrl) || !Number.isFinite(published) ||
-              age < -60 * 60 * 1000 || age > 30 * 24 * 60 * 60 * 1000 ||
-              requiresEditorialReview(item)) continue;
+              age < -60 * 60 * 1000 || age > 45 * 24 * 60 * 60 * 1000) continue;
           seen.add(key);
           const excerpt = item.description && item.description.length > 10 ? item.description : item.title;
           articles.push({
@@ -997,7 +1010,7 @@ function startServer(portToTry) {
           });
         }
         articles.sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
-        await enrichPublisherImages(articles, 30, 5);
+        await enrichPublisherImages(articles, 40, 8);
         return json(res, 200, { query, totalArticles: articles.length, articles });
       } catch (err) {
         console.error('[Search] Failed:', err.message);
