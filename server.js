@@ -294,26 +294,53 @@ const FEED_CONFIG = [
 
 const publisherImageCache = new Map();
 
+function isGenericNewsImageUrl(value) {
+  const raw = String(value || '').trim();
+  if (!/^https?:\/\//i.test(raw)) return true;
+  try {
+    const url = new URL(raw);
+    const host = url.hostname.toLowerCase();
+    const path = url.pathname.toLowerCase();
+    if (/(^|\.)((gstatic|googleusercontent)\.com|google\.com|news\.google\.com)$/.test(host)) return true;
+    if (/(logo|favicon|placeholder|default-image|no-image|avatar|profile|icon)([-_.\/]|$)/i.test(path)) return true;
+    return false;
+  } catch { return true; }
+}
+
 async function getPublisherImage(articleUrl) {
   if (!articleUrl || !/^https:\/\//i.test(articleUrl)) return '';
   if (publisherImageCache.has(articleUrl)) return publisherImageCache.get(articleUrl);
   try {
-    const html = await fetchRaw(articleUrl, 4500);
-    const patterns = [
-      /<meta[^>]+property=["']og:image(?::secure_url)?["'][^>]+content=["']([^"']+)["']/i,
-      /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url)?["']/i,
-      /<meta[^>]+name=["']twitter:image(?::src)?["'][^>]+content=["']([^"']+)["']/i,
-      /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image(?::src)?["']/i
-    ];
-    let image = '';
-    for (const pattern of patterns) {
-      const match = html.match(pattern);
-      if (match && match[1]) { image = cleanHtmlEntities(match[1].trim()); break; }
+    const html = await fetchRaw(articleUrl, 6500);
+    const candidates = [];
+    const metaTags = html.match(/<meta\b[^>]*>/gi) || [];
+    for (const tag of metaTags) {
+      const property = (tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+      const content = (tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+      if (/^(og:image(?::secure_url)?|twitter:image(?::src)?)$/i.test(property) && content) candidates.push(content);
     }
-    if (image.startsWith('//')) image = 'https:' + image;
-    if (!/^https:\/\//i.test(image) || /\.(?:svg|gif)(?:[?#]|$)/i.test(image)) image = '';
+    const jsonLd = html.match(/<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+    for (const block of jsonLd) {
+      const body = block.replace(/^<script[^>]*>/i, '').replace(/<\/script>$/i, '');
+      const matches = body.match(/["']image["']\s*:\s*(?:\[\s*)?["']([^"']+)["']/gi) || [];
+      for (const match of matches) {
+        const value = match.match(/["']([^"']+)["']\s*$/);
+        if (value) candidates.push(value[1]);
+      }
+    }
+    const firstArticleImage = html.match(/<(?:article|figure)[^>]*>[\s\S]{0,18000}?<img\b[^>]*(?:src|data-src|data-original)=["']([^"']+)["']/i);
+    if (firstArticleImage) candidates.push(firstArticleImage[1]);
+    let image = '';
+    for (let candidate of candidates) {
+      candidate = cleanHtmlEntities(String(candidate).trim()).replace(/&amp;/g, '&');
+      try { candidate = new URL(candidate, articleUrl).href; } catch { continue; }
+      if (!isGenericNewsImageUrl(candidate) && !/\.(?:svg|gif)(?:[?#]|$)/i.test(candidate)) {
+        image = candidate;
+        break;
+      }
+    }
     publisherImageCache.set(articleUrl, image);
-    if (publisherImageCache.size > 600) publisherImageCache.delete(publisherImageCache.keys().next().value);
+    if (publisherImageCache.size > 900) publisherImageCache.delete(publisherImageCache.keys().next().value);
     return image;
   } catch {
     publisherImageCache.set(articleUrl, '');
@@ -321,21 +348,42 @@ async function getPublisherImage(articleUrl) {
   }
 }
 
-async function enrichPublisherImages(articles, maxItems = 24, concurrency = 4) {
+async function enrichPublisherImages(articles, maxItems = 120, concurrency = 10) {
   const targets = articles.filter(item => item.articleUrl && (
-    item.imageSource === 'fallback' || !item.image || !/^https:\/\//i.test(item.image) ||
-    /(?:^|\.)google(?:usercontent|apis|\.com)|gstatic\.com|news\.google\.com/i.test(String(item.image || ''))
+    item.imageSource === 'fallback' || !item.image || isGenericNewsImageUrl(item.image)
   )).slice(0, maxItems);
   let cursor = 0;
   const workers = Array.from({length: Math.min(concurrency, targets.length)}, async () => {
     while (cursor < targets.length) {
       const item = targets[cursor++];
       const image = await getPublisherImage(item.articleUrl);
-      if (image) { item.image = image; item.imageSource = 'publisher'; }
-      else if (/(?:^|\.)google(?:usercontent|apis|\.com)|gstatic\.com|news\.google\.com/i.test(String(item.image || ''))) { item.image = ''; item.imageSource = 'fallback'; }
+      if (image) {
+        item.image = image;
+        item.imageSource = 'publisher';
+      } else if (isGenericNewsImageUrl(item.image)) {
+        item.image = '';
+        item.imageSource = 'fallback';
+      }
     }
   });
   await Promise.all(workers);
+
+  // Never show the same generic publisher thumbnail on a whole page.
+  const seen = new Set();
+  for (const item of articles) {
+    if (!item.image || isGenericNewsImageUrl(item.image)) {
+      item.image = '';
+      item.imageSource = 'fallback';
+      continue;
+    }
+    const normalized = item.image.split('#')[0].split('?')[0].toLowerCase();
+    if (seen.has(normalized)) {
+      item.image = '';
+      item.imageSource = 'fallback';
+    } else {
+      seen.add(normalized);
+    }
+  }
 }
 
 function fetchRaw(url, timeoutMs = 9000) {
@@ -555,8 +603,8 @@ async function runNewsUpdate(language = 'hi') {
           source: item.source,
           articleUrl: item.articleUrl,
           readTime: language === 'en' ? '2 min' : '2 मिनट',
-          image: item.imageUrl && /^https:\/\//i.test(item.imageUrl) ? item.imageUrl : '',
-          imageSource: item.imageUrl && /^https:\/\//i.test(item.imageUrl) ? 'rss' : 'fallback',
+          image: item.imageUrl && !isGenericNewsImageUrl(item.imageUrl) ? item.imageUrl : '',
+          imageSource: item.imageUrl && !isGenericNewsImageUrl(item.imageUrl) ? 'rss' : 'fallback',
           views: "—",
           content: cleanContent
         };
@@ -580,7 +628,7 @@ async function runNewsUpdate(language = 'hi') {
   if (allArticles.length > 0) {
     // Put the newest RSS publication first so the homepage lead and ticker are current.
     allArticles.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
-    await enrichPublisherImages(allArticles, 120, 12);
+    await enrichPublisherImages(allArticles, 180, 12);
     const payload = {
       lastUpdated: new Date().toISOString(),
       totalArticles: allArticles.length,
