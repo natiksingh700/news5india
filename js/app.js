@@ -52,6 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
     tickerPlayPauseBtn: document.getElementById("tickerPlayPauseBtn"),
 
     // Cricket Strip
+    cricketStrip: document.getElementById("cricketStrip"),
     cricketTournament: document.getElementById("cricketTournament"),
     cricketStatus: document.getElementById("cricketStatus"),
     team1Score: document.getElementById("team1Score"),
@@ -297,7 +298,11 @@ document.addEventListener("DOMContentLoaded", () => {
      ========================================================================== */
   function renderCricketWidget() {
     const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
-    if (!data || !data.cricketMatch) return;
+    if (!data || !data.cricketMatch) {
+      if (elements.cricketStrip) elements.cricketStrip.hidden = true;
+      return;
+    }
+    if (elements.cricketStrip) elements.cricketStrip.hidden = false;
     const match = data.cricketMatch;
 
     if (elements.cricketTournament) elements.cricketTournament.textContent = match.tournament;
