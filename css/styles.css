@@ -3308,3 +3308,18 @@ img {
   .language-icon { display: none; }
   .news-language-select { max-width: 78px; font-size: 0.76rem; }
 }
+
+
+/* Admin-managed sticky sidebar advertisement */
+.n5-sticky-ad-content { display:flex; flex-direction:column; gap:10px; }
+.n5-sticky-ad-content a { display:block; border-radius:10px; overflow:hidden; }
+.n5-sticky-ad-image { display:block; width:100%; max-height:62vh; object-fit:contain; border-radius:10px; background:#fff; }
+.n5-sticky-ad-title { margin:0; color:#fff; font-size:.9rem; line-height:1.45; font-weight:750; overflow-wrap:anywhere; }
+.n5-ad-manager { padding:18px; margin:16px 0 22px; border:1px solid #dbe3ef; border-radius:14px; background:var(--bg-surface-alt,#f8fafc); }
+.n5-ad-manager h3 { margin:0 0 8px; color:var(--text-heading,#111827); }
+.n5-ad-manager>p { margin:0 0 12px; color:var(--text-muted,#64748b); font-size:14px; line-height:1.5; }
+.n5-ad-current { display:flex; align-items:center; flex-wrap:wrap; gap:12px; margin-top:16px; padding-top:14px; border-top:1px solid #dbe3ef; }
+.n5-admin-ad-preview { width:100px; height:110px; object-fit:contain; background:#fff; border:1px solid #ddd; border-radius:8px; }
+.n5-ad-current p { flex:1; min-width:160px; font-weight:700; overflow-wrap:anywhere; }
+.n5-admin-divider { border:0; border-top:1px solid #e2e8f0; margin:24px 0; }
+@media(max-width:768px){.n5-sticky-ad-image{max-height:320px}.sticky-sponsor-ad{display:none!important}}
