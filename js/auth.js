@@ -38,23 +38,26 @@
   }
   function renderPublicAds(ads){
     const slot=$('stickySponsorAd');
-    if(!slot||!Array.isArray(ads)||!ads.length)return;
-    slot.replaceChildren();
-    ads.slice(0,3).forEach(ad=>{
-      if(!ad.image_data)return;
-      const card=document.createElement('div');card.className='n5-public-ad-slot';
+    if(!slot)return;
+    const list=slot.querySelector('.n5-sidebar-ad-list');
+    if(!list)return;
+    list.replaceChildren();
+    (Array.isArray(ads)?ads:[]).slice(0,3).filter(ad=>ad&&ad.image_data).forEach(ad=>{
+      const card=document.createElement('article');card.className='n5-public-ad-slot';
       const strip=document.createElement('div');strip.className='ad-tag-strip';
       const label=document.createElement('span');label.className='ad-label';label.textContent='विज्ञापन';
       const sponsor=document.createElement('span');sponsor.className='ad-sponsor';sponsor.textContent=ad.sponsor||'प्रायोजित';
       strip.append(label,sponsor);
       const visual=document.createElement('div');visual.className='n5-sticky-ad-content';
-      const image=document.createElement('img');image.src=ad.image_data;image.alt=ad.title||'Sponsored advertisement';image.loading='lazy';image.className='n5-sticky-ad-image';
+      const image=document.createElement('img');image.src=ad.image_data;image.alt=ad.title||'Sponsored advertisement';image.loading='lazy';image.decoding='async';image.className='n5-sticky-ad-image';
+      image.addEventListener('error',()=>card.remove(),{once:true});
       if(ad.click_url){
         const link=document.createElement('a');link.href=ad.click_url;link.target='_blank';link.rel='noopener noreferrer sponsored';link.setAttribute('aria-label',ad.title||'विज्ञापन खोलें');link.append(image);visual.append(link);
       }else visual.append(image);
       const caption=document.createElement('p');caption.className='n5-sticky-ad-title';caption.textContent=ad.title||'प्रायोजित विज्ञापन';
-      visual.append(caption);card.append(strip,visual);slot.append(card);
+      visual.append(caption);card.append(strip,visual);list.append(card);
     });
+    slot.hidden=list.children.length===0;
   }
   async function loadAdvertisement(){
     try{const data=await api('/api/advertisements');renderPublicAds(data.advertisements||[]);}
