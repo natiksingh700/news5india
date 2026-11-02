@@ -42,7 +42,7 @@
     const list=slot.querySelector('.n5-sidebar-ad-list');
     if(!list)return;
     list.replaceChildren();
-    (Array.isArray(ads)?ads:[]).slice(0,3).filter(ad=>ad&&ad.image_data).forEach(ad=>{
+    (Array.isArray(ads)?ads:[]).filter(ad=>ad&&ad.image_data).forEach(ad=>{
       const card=document.createElement('article');card.className='n5-public-ad-slot';
       const strip=document.createElement('div');strip.className='ad-tag-strip';
       const label=document.createElement('span');label.className='ad-label';label.textContent='विज्ञापन';
@@ -68,38 +68,19 @@
     try{
       const data=await api('/api/advertisements'),ads=data.advertisements||[];
       current.replaceChildren();
-      [1,2,3].forEach(slotNo=>{
-        const ad=ads.find(item=>Number(item.slot_no)===slotNo);
-        const card=document.createElement('div');card.className='n5-admin-ad-slot'+(ad?' is-filled':'');
-        const heading=document.createElement('strong');heading.textContent='Ad Slot '+slotNo+(ad?' — '+ad.title:' — खाली');card.append(heading);
-        if(ad){
-          const preview=document.createElement('img');preview.src=ad.image_data;preview.alt=ad.title;preview.className='n5-admin-ad-preview';
-          const info=document.createElement('p');info.textContent=ad.sponsor||'प्रायोजित';card.append(preview,info);
-        }else{
-          const empty=document.createElement('p');empty.textContent='अभी कोई विज्ञापन नहीं';card.append(empty);
-        }
-        const choose=document.createElement('button');choose.type='button';choose.className='n5-account-btn';
-        choose.textContent=ad?'इस स्लॉट को बदलें':'इस स्लॉट में जोड़ें';
-        choose.addEventListener('click',()=>{
-          $('n5AdSlot').value=String(slotNo);
-          $('n5AdTitle').value=ad?ad.title:'';
-          $('n5AdSponsor').value=ad?(ad.sponsor||''):'';
-          $('n5AdLink').value=ad?(ad.click_url||''):'';
-          $('n5AdImage').value='';
-          $('n5AdMessage').textContent=ad?'Ad Slot '+slotNo+' चुना है। नई फोटो अपलोड करके Publish करें।':'Ad Slot '+slotNo+' खाली है। फोटो अपलोड करें।';
-          $('n5AdForm').scrollIntoView({behavior:'smooth',block:'center'});
+      if(!ads.length){current.textContent='अभी कोई विज्ञापन प्रकाशित नहीं है।';return;}
+      ads.forEach((ad,index)=>{
+        const card=document.createElement('div');card.className='n5-admin-ad-slot is-filled';
+        const heading=document.createElement('strong');heading.textContent='विज्ञापन '+(index+1)+' — '+ad.title;card.append(heading);
+        const preview=document.createElement('img');preview.src=ad.image_data;preview.alt=ad.title;preview.className='n5-admin-ad-preview';
+        const info=document.createElement('p');info.textContent=ad.sponsor||'प्रायोजित';card.append(preview,info);
+        const remove=document.createElement('button');remove.type='button';remove.className='n5-account-btn';remove.textContent='विज्ञापन हटाएं';
+        remove.addEventListener('click',async()=>{
+          if(!confirm('क्या यह विज्ञापन हटाना चाहते हैं?'))return;
+          try{await api('/api/advertisements/'+ad.id,{method:'DELETE'});await loadAdvertisement();await loadAdminAdvertisement();}
+          catch(e){alert(e.message);}
         });
-        card.append(choose);
-        if(ad){
-          const remove=document.createElement('button');remove.type='button';remove.className='n5-account-btn';remove.textContent='हटाएं';
-          remove.addEventListener('click',async()=>{
-            if(!confirm('Ad Slot '+slotNo+' का विज्ञापन हटाएं?'))return;
-            try{await api('/api/advertisements/'+ad.id,{method:'DELETE'});await loadAdvertisement();await loadAdminAdvertisement();}
-            catch(e){alert(e.message);}
-          });
-          card.append(remove);
-        }
-        current.append(card);
+        card.append(remove);current.append(card);
       });
     }catch(e){current.textContent='विज्ञापन की जानकारी लोड नहीं हो पाई।';}
   }
@@ -201,12 +182,11 @@
         const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('इमेज पढ़ी नहीं जा सकी।'));reader.readAsDataURL(file);
       });
       await api('/api/advertisements',{method:'POST',body:JSON.stringify({
-        slotNo:Number($('n5AdSlot').value),title:$('n5AdTitle').value.trim(),sponsor:$('n5AdSponsor').value.trim(),
+        slotNo:title:$('n5AdTitle').value.trim(),sponsor:$('n5AdSponsor').value.trim(),
         clickUrl:$('n5AdLink').value.trim(),imageData
       })});
-      const savedSlot=$('n5AdSlot').value;
-      adForm.reset();$('n5AdSlot').value=savedSlot;
-      message.textContent='Ad Slot '+savedSlot+' का विज्ञापन सेव हो गया!';
+      adForm.reset();
+      message.textContent='विज्ञापन सफलतापूर्वक पब्लिश हो गया!';
       await loadAdvertisement();await loadAdminAdvertisement();
     }catch(err){message.textContent=err.message;}finally{button.disabled=false;}
   });
