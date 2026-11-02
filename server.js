@@ -306,7 +306,7 @@ function isRecentArticle(pubDate) {
   const published = Date.parse(pubDate || "");
   if (!Number.isFinite(published)) return false;
   const age = Date.now() - published;
-  return age >= -60 * 60 * 1000 && age <= 72 * 60 * 60 * 1000;
+  return age >= -60 * 60 * 1000 && age <= 24 * 60 * 60 * 1000;
 }
 
 // ─── XML Parser (extracts title + description + pubDate + source) ─────────────
