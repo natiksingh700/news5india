@@ -117,6 +117,7 @@ document.addEventListener("DOMContentLoaded", () => {
     epaperModalBackdrop: document.getElementById("epaperModalBackdrop"),
     closeEpaperBtn: document.getElementById("closeEpaperBtn"),
     openEpaperModalBtn: document.getElementById("openEpaperModalBtn"),
+    downloadEpaperBtn: document.getElementById("downloadEpaperBtn"),
     footerEpaperLink: document.getElementById("footerEpaperLink"),
     footerLiveTvLink: document.getElementById("footerLiveTvLink"),
 
@@ -1304,6 +1305,7 @@ document.addEventListener("DOMContentLoaded", () => {
       openEpaperModal();
     });
     if (elements.openEpaperModalBtn) elements.openEpaperModalBtn.addEventListener("click", openEpaperModal);
+    if (elements.downloadEpaperBtn) elements.downloadEpaperBtn.addEventListener("click", () => { window.open("/epaper?lang=" + (state.currentLanguage === "en" ? "en" : "hi"), "_blank", "noopener"); });
     if (elements.footerEpaperLink) elements.footerEpaperLink.addEventListener("click", (e) => {
       e.preventDefault();
       openEpaperModal();
