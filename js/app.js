@@ -185,23 +185,21 @@ document.addEventListener("DOMContentLoaded", () => {
       if (res.ok) {
         const liveData = await res.json();
         const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
-        if (target && Array.isArray(target.articles) && Array.isArray(liveData.articles) && liveData.articles.length) {
+        if (target && Array.isArray(target.articles) && Array.isArray(liveData.articles)) {
           // Replace the previous auto-fetched set instead of keeping stale live headlines forever.
           const editorialArticles = target.articles.filter(article => !String(article.id).startsWith("live-"));
           target.articles = [...liveData.articles, ...editorialArticles].slice(0, 120);
 
-          // The newest fetched article also drives the homepage lead story.
+          // The newest fetched article drives the lead story; clear it when no verified items remain.
           const newest = liveData.articles[0];
-          if (newest) {
-            target.leadStory = {
-              ...newest,
-              subtitle: newest.excerpt || newest.title,
-              bullets: [],
-              date: newest.date || "अभी-अभी",
-              readTime: newest.readTime || "2 मिनट"
-            };
-            renderLeadStory();
-          }
+          target.leadStory = newest ? {
+            ...newest,
+            subtitle: newest.excerpt || newest.title,
+            bullets: [],
+            date: newest.date || "अभी-अभी",
+            readTime: newest.readTime || "2 मिनट"
+          } : null;
+          renderLeadStory();
 
           // Refresh the ticker from the latest RSS headlines.
           if (Array.isArray(target.breaking)) {
@@ -406,7 +404,13 @@ document.addEventListener("DOMContentLoaded", () => {
      ========================================================================== */
   function renderLeadStory() {
     const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
-    if (!data || !data.leadStory || !elements.leadStoryContainer) return;
+    if (!elements.leadStoryContainer) return;
+    if (!data || !data.leadStory) {
+      elements.leadStoryContainer.innerHTML = "";
+      elements.leadStoryContainer.hidden = true;
+      return;
+    }
+    elements.leadStoryContainer.hidden = false;
     const lead = data.leadStory;
 
     const bulletsHtml = lead.bullets && lead.bullets.length
@@ -537,16 +541,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getCategoryName(slug) {
     const map = {
-      national: "देश (National)",
-      state: "राज्य व शहर",
-      politics: "राजनीति",
-      sports: "क्रिकेट व खेल",
-      entertainment: "मनोरंजन",
-      business: "बिज़नेस व मार्केट",
-      tech: "टेक व ऑटो",
-      breaking: "बड़ी खबर",
-      videos: "वीडियो",
-      webstories: "वेब स्टोरीज़"
+      national: "देश", world: "दुनिया", state: "राज्य व शहर",
+      politics: "राजनीति", sports: "क्रिकेट व खेल", entertainment: "मनोरंजन",
+      movies: "फिल्में", ott: "वेब सीरीज़ और OTT", trailers: "ट्रेलर और टीज़र",
+      boxoffice: "बॉक्स ऑफिस", business: "बिज़नेस व मार्केट", tech: "टेक्नोलॉजी",
+      ai: "AI और टेक", gadgets: "मोबाइल और गैजेट्स", gaming: "गेमिंग और ई-स्पोर्ट्स",
+      auto: "ऑटो और EV", science: "विज्ञान और अंतरिक्ष", education: "शिक्षा और परीक्षा",
+      jobs: "सरकारी नौकरी और भर्ती", health: "स्वास्थ्य", weather: "मौसम",
+      agriculture: "कृषि", environment: "पर्यावरण", breaking: "बड़ी खबर",
+      videos: "वीडियो", webstories: "वेब स्टोरीज़"
     };
     return map[slug] || slug;
   }
