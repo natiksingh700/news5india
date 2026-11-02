@@ -437,8 +437,13 @@ function feedsForLanguage(language) {
     ...feed,
     url: feed.url.replace(/hl=hi/g, 'hl=en-IN').replace(/ceid=IN:hi/g, 'ceid=IN:en'),
     category: ENGLISH_CATEGORY_NAMES[feed.category] || feed.category,
-    stateName: feed.stateName === 'उत्तर प्रदेश' ? 'Uttar Pradesh' :
-      feed.stateName === 'दिल्ली NCR' ? 'Delhi NCR' : feed.stateName,
+    stateName: ({
+      'उत्तर प्रदेश':'Uttar Pradesh','दिल्ली NCR':'Delhi NCR','महाराष्ट्र':'Maharashtra',
+      'पंजाब':'Punjab','हरियाणा':'Haryana','उत्तराखंड':'Uttarakhand','पश्चिम बंगाल':'West Bengal',
+      'गुजरात':'Gujarat','जम्मू-कश्मीर':'Jammu & Kashmir','छत्तीसगढ़':'Chhattisgarh',
+      'झारखंड':'Jharkhand','ओडिशा':'Odisha','तेलंगाना':'Telangana','कर्नाटक':'Karnataka',
+      'केरल':'Kerala','तमिलनाडु':'Tamil Nadu','आंध्र प्रदेश':'Andhra Pradesh','असम और पूर्वोत्तर':'Assam & Northeast'
+    })[feed.stateName] || feed.stateName,
     author: 'News5India News Desk'
   }));
 }
