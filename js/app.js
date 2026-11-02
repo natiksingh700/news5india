@@ -561,6 +561,32 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ==========================================================================
      7. Lead Story (बड़ी खबरें)
      ========================================================================== */
+
+  function getArticleImage(item) {
+    const original = item && typeof item.image === "string" ? item.image.trim() : "";
+    if (original && /^https:\/\//i.test(original)) return original;
+    const title = String(item && item.title || "News5India");
+    let hash = 0;
+    for (let i = 0; i < title.length; i++) hash = ((hash << 5) - hash + title.charCodeAt(i)) | 0;
+    const hue = Math.abs(hash) % 360;
+    const label = String(item && item.category || "NEWS").replace(/[<>&"]/g, "").slice(0, 28);
+    const safeTitle = title.replace(/[<>&"]/g, "").slice(0, 54);
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(' + hue + ',55%,25%)"/><stop offset="1" stop-color="hsl(' + ((hue+48)%360) + ',70%,12%)"/></linearGradient></defs><rect width="800" height="450" fill="url(#g)"/><circle cx="700" cy="70" r="190" fill="#fff" opacity=".06"/><circle cx="90" cy="420" r="210" fill="#fff" opacity=".05"/><text x="48" y="90" fill="#fff" opacity=".85" font-family="Arial,sans-serif" font-size="27" font-weight="700">' + label + '</text><path d="M48 120h100" stroke="#ef3340" stroke-width="8" stroke-linecap="round"/><text x="48" y="235" fill="#fff" font-family="Arial,sans-serif" font-size="30" font-weight="700">' + safeTitle + '</text><text x="48" y="405" fill="#fff" opacity=".7" font-family="Arial,sans-serif" font-size="19">NEWS5INDIA</text></svg>';
+    return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+  }
+
+  function bindNewsImageFallbacks(root) {
+    if (!root) return;
+    root.querySelectorAll("img[data-news-fallback]").forEach(img => {
+      img.addEventListener("error", () => {
+        if (img.dataset.fallbackApplied === "true") return;
+        img.dataset.fallbackApplied = "true";
+        const badge = img.parentElement && img.parentElement.querySelector(".card-category-badge,.modal-category");
+        img.src = getArticleImage({category: badge ? badge.textContent : "NEWS", title: img.alt});
+      }, { once: true });
+    });
+  }
+
   function renderLeadStory() {
     const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
     if (!elements.leadStoryContainer) return;
@@ -580,7 +606,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     elements.leadStoryContainer.innerHTML = `
       <div class="lead-img-wrap">
-        <img src="${lead.image}" alt="${lead.title}" class="lead-img" loading="eager" />
+        <img src="${getArticleImage(lead)}" data-news-fallback alt="${lead.title}" class="lead-img" loading="eager" />
         <span class="lead-badge">★ बड़ी खबर</span>
       </div>
       <div class="lead-content">
@@ -599,6 +625,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </div>
     `;
 
+    bindNewsImageFallbacks(elements.leadStoryContainer);
     elements.leadStoryContainer.onclick = () => openArticleModal(lead);
   }
 
@@ -672,7 +699,7 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.newsCardsGrid.innerHTML = filtered.map(item => `
       <article class="news-card" data-article-id="${item.id}">
         <div class="news-card-img-wrap">
-          <img src="${item.image}" alt="${item.title}" class="news-card-img" loading="lazy" />
+          <img src="${getArticleImage(item)}" data-news-fallback alt="${item.title}" class="news-card-img" loading="lazy" />
           <span class="card-category-badge">${item.category}${item.stateName ? ` • ${item.stateName}` : ''}</span>
         </div>
         <div class="news-card-body">
@@ -690,6 +717,7 @@ document.addEventListener("DOMContentLoaded", () => {
       </article>
     `).join("");
 
+    bindNewsImageFallbacks(elements.newsCardsGrid);
     elements.newsCardsGrid.querySelectorAll(".news-card").forEach(card => {
       card.addEventListener("click", () => {
         const id = card.getAttribute("data-article-id");
@@ -734,7 +762,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="category-shelf-grid">
             ${items.map(item => `
               <article class="category-shelf-card" data-shelf-article="${item.id}">
-                <img src="${item.image || ''}" alt="" loading="lazy">
+                <img src="${getArticleImage(item)}" data-news-fallback alt="${item.title || 'News'}" loading="lazy">
                 <div class="category-shelf-copy">
                   <span class="category-shelf-meta">${item.stateName ? item.stateName + ' · ' : ''}${item.date || ''}</span>
                   <h4>${item.title}</h4>
@@ -745,6 +773,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </section>`;
     }).filter(Boolean);
     host.innerHTML = sections.length ? sections.join("") : '<p class="category-shelf-empty">अलग-अलग श्रेणियों की ताज़ा खबरें उपलब्ध होते ही यहाँ दिखाई देंगी।</p>';
+    bindNewsImageFallbacks(host);
     host.querySelectorAll("[data-shelf-article]").forEach(card => {
       card.addEventListener("click", () => {
         const item = articles.find(article => article.id === card.getAttribute("data-shelf-article"));
