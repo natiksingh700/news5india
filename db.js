@@ -1,7 +1,17 @@
+const dns = require('dns');
 const { Pool } = require('pg');
+
+// Render/Neon may return an IPv6 address that is unreachable from the instance.
+// Prefer IPv4 when Node resolves the database hostname.
+if (typeof dns.setDefaultResultOrder === 'function') {
+  dns.setDefaultResultOrder('ipv4first');
+}
 require('dotenv').config();
 
-const connectionString = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_C3i1csmKzWUj@ep-lingering-fog-bdkyx1qm-pooler.c-8.us-east-2.aws.neon.tech/neondb?sslmode=require';
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error('DATABASE_URL is missing. Add your Neon PostgreSQL connection string in Render Environment Variables.');
+}
 
 const pool = new Pool({
   connectionString,
@@ -11,8 +21,9 @@ const pool = new Pool({
 });
 
 async function initDB() {
-  const client = await pool.connect();
+  let client;
   try {
+    client = await pool.connect();
     // 1. Articles Table
     await client.query(`
       CREATE TABLE IF NOT EXISTS articles (
@@ -105,10 +116,12 @@ async function initDB() {
     await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS advertisements_one_active_per_slot_idx ON advertisements (slot_no) WHERE is_active = TRUE`);
 
     console.log('✅ [Neon PostgreSQL] Database tables initialized successfully!');
+    return true;
   } catch (err) {
     console.error('❌ [Neon PostgreSQL] Init error:', err.message);
+    return false;
   } finally {
-    client.release();
+    if (client) client.release();
   }
 }
 
