@@ -455,7 +455,7 @@ function setCookie(res,value,age=SESSION_TTL){res.setHeader('Set-Cookie',SESSION
 function json(res,status,data){res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));}
 function readBody(req){return new Promise((resolve,reject)=>{let b='';req.on('data',c=>{b+=c;if(b.length>1000000){reject(new Error('Too large'));req.destroy();}});req.on('end',()=>{try{resolve(JSON.parse(b||'{}'));}catch{reject(new Error('Invalid JSON'));}});req.on('error',reject);});}
 async function initAdmin(){
-  const password=process.env.ADMIN_PASSWORD,email=process.env.ADMIN_EMAIL,username=process.env.ADMIN_USERNAME||'admin_news5india';
+  const password=process.env.ADMIN_PASSWORD,email=process.env.ADMIN_EMAIL||'admin_news5india@news5india.local',username=process.env.ADMIN_USERNAME||'admin_news5india';
   if(!password||!email){console.warn('Admin setup needs ADMIN_PASSWORD and ADMIN_EMAIL environment variables.');return;}
   const hash=await hashPass(password);
   await pool.query("INSERT INTO users(username,email,password_hash,role) VALUES($1,$2,$3,'admin') ON CONFLICT(username) DO UPDATE SET email=EXCLUDED.email,password_hash=EXCLUDED.password_hash,role='admin'",[username,email,hash]);
@@ -567,7 +567,7 @@ async function authRoute(req,res,path){
         }
       }
 
-      const handleAdd = (params) => {
+      if (req.method === 'GET') return json(res,405,{success:false,error:'GET webhook publishing is disabled'});\n\n      const handleAdd = (params) => {
         try {
           // Normalize payload from Meta Graph API, Zapier, Make.com, or direct form
           let title = '';
