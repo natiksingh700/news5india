@@ -363,8 +363,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!elements.newsRefreshStatus) return;
     const updated = Date.parse(data && data.lastUpdated || "");
     const ageMinutes = Number.isFinite(updated) ? Math.max(0, Math.floor((Date.now() - updated) / 60000)) : null;
-    if (data && data.refreshStatus === "stale-cleared") {
-      elements.newsRefreshStatus.textContent = "ताज़ा खबरों का इंतज़ार है";
+    if (data && ["stale-cleared","no-fresh-news"].includes(data.refreshStatus)) {
+      elements.newsRefreshStatus.textContent = "नई खबरें मिलते ही अपडेट होगा";
       elements.newsRefreshStatus.dataset.state = "waiting";
     } else if (ageMinutes === null) {
       elements.newsRefreshStatus.textContent = "अपडेट की जानकारी उपलब्ध नहीं";
