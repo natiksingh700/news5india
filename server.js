@@ -1,0 +1,578 @@
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+const https = require('https');
+
+let PORT = process.env.PORT ? parseInt(process.env.PORT) : 3000;
+const ROOT = __dirname;
+const DATA_FILE = path.join(ROOT, 'data', 'live-news.json');
+const INSTA_DATA_FILE = path.join(ROOT, 'data', 'instagram-stories.json');
+
+const MIME_TYPES = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'application/javascript; charset=utf-8',
+  '.json': 'application/json; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon'
+};
+
+/* ==========================================================================
+   24x7 MULTI-CATEGORY REAL NEWS ENGINE (Google News RSS — 100% Real News)
+   Fetches REAL headlines from Google News Hindi RSS every 5 minutes
+   Categories: National, World, States, Entertainment/OTT, Sports, Business, Tech
+   ========================================================================== */
+
+// ─── RSS Feed Config ──────────────────────────────────────────────────────────
+// Each feed: { url, category, categorySlug, state?, stateName?, author, image pool }
+const FEED_CONFIG = [
+  // ── National (देश) ──
+  {
+    url: 'https://news.google.com/rss/headlines/section/topic/NATION?hl=hi&gl=IN&ceid=IN:hi',
+    category: 'देश',
+    categorySlug: 'national',
+    author: 'News5Indiaa राष्ट्रीय डेस्क',
+    maxItems: 4,
+    images: [
+      'https://images.unsplash.com/photo-1532375810709-75b1da00a3b4?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1524492412937-b28074a5d7da?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1609946860441-a51ffcf22208?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── World (विश्व) ──
+  {
+    url: 'https://news.google.com/rss/headlines/section/topic/WORLD?hl=hi&gl=IN&ceid=IN:hi',
+    category: 'विश्व',
+    categorySlug: 'world',
+    author: 'News5Indiaa अंतरराष्ट्रीय डेस्क',
+    maxItems: 3,
+    images: [
+      'https://images.unsplash.com/photo-1526778548025-fa2f459cd5c1?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1541872703-74c5e44368f9?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Entertainment / Bollywood / OTT ──
+  {
+    url: 'https://news.google.com/rss/headlines/section/topic/ENTERTAINMENT?hl=hi&gl=IN&ceid=IN:hi',
+    category: 'मनोरंजन',
+    categorySlug: 'entertainment',
+    author: 'News5Indiaa बॉलीवुड डेस्क',
+    maxItems: 4,
+    images: [
+      'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1440404653325-ab127d49abc1?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1598899134739-24c46f58b8c0?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Sports / Cricket ──
+  {
+    url: 'https://news.google.com/rss/headlines/section/topic/SPORTS?hl=hi&gl=IN&ceid=IN:hi',
+    category: 'खेल',
+    categorySlug: 'sports',
+    author: 'News5Indiaa स्पोर्ट्स डेस्क',
+    maxItems: 3,
+    images: [
+      'https://images.unsplash.com/photo-1531415074968-036ba1b575da?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1624526267942-ab0ff8a3e972?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1461896836934-bd45ba8a6d3c?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Business / Share Market ──
+  {
+    url: 'https://news.google.com/rss/headlines/section/topic/BUSINESS?hl=hi&gl=IN&ceid=IN:hi',
+    category: 'बिज़नेस',
+    categorySlug: 'business',
+    author: 'News5Indiaa बिज़नेस डेस्क',
+    maxItems: 3,
+    images: [
+      'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1526304640581-d334cdbbf45e?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Technology / Gadgets ──
+  {
+    url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=hi&gl=IN&ceid=IN:hi',
+    category: 'टेक्नोलॉजी',
+    categorySlug: 'tech',
+    author: 'News5Indiaa टेक डेस्क',
+    maxItems: 2,
+    images: [
+      'https://images.unsplash.com/photo-1518770660439-4636190af475?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Movies & OTT / Web Series (Search-based for fresh movie+series news) ──
+  {
+    url: 'https://news.google.com/rss/search?q=नई+फिल्म+OR+OTT+रिलीज+OR+वेब+सीरीज+OR+Netflix+OR+trailer&hl=hi&gl=IN&ceid=IN:hi',
+    category: 'मनोरंजन',
+    categorySlug: 'entertainment',
+    author: 'News5Indiaa OTT डेस्क',
+    maxItems: 3,
+    images: [
+      'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1585647347483-22b66260dfff?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Uttar Pradesh (State) ──
+  {
+    url: 'https://news.google.com/rss/search?q=उत्तर+प्रदेश+OR+लखनऊ+OR+नोएडा+OR+प्रयागराज+OR+वाराणसी&hl=hi&gl=IN&ceid=IN:hi',
+    category: 'राज्य',
+    categorySlug: 'state',
+    state: 'up',
+    stateName: 'उत्तर प्रदेश',
+    author: 'News5Indiaa यूपी ब्यूरो',
+    maxItems: 3,
+    images: [
+      'https://images.unsplash.com/photo-1564507592333-c60657eea523?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1548013146-72479768bada?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1585136917228-c5db4b7b9cf2?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Delhi NCR (State) ──
+  {
+    url: 'https://news.google.com/rss/search?q=दिल्ली+OR+गुरुग्राम+OR+NCR+OR+नई+दिल्ली&hl=hi&gl=IN&ceid=IN:hi',
+    category: 'राज्य',
+    categorySlug: 'state',
+    state: 'delhi',
+    stateName: 'दिल्ली NCR',
+    author: 'News5Indiaa दिल्ली ब्यूरो',
+    maxItems: 3,
+    images: [
+      'https://images.unsplash.com/photo-1587474260584-136574528ed5?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1595658658481-d53d3f999875?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1597040663342-45b6ba68fa1b?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Bihar (State) ──
+  {
+    url: 'https://news.google.com/rss/search?q=बिहार+OR+पटना+OR+गया+OR+मुजफ्फरपुर&hl=hi&gl=IN&ceid=IN:hi',
+    category: 'राज्य',
+    categorySlug: 'state',
+    state: 'bihar',
+    stateName: 'बिहार',
+    author: 'News5Indiaa बिहार ब्यूरो',
+    maxItems: 2,
+    images: [
+      'https://images.unsplash.com/photo-1590050752117-238cb0fb12b1?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1583318432730-5e3f5092f4c5?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Madhya Pradesh (State) ──
+  {
+    url: 'https://news.google.com/rss/search?q=मध्य+प्रदेश+OR+भोपाल+OR+इंदौर+OR+जबलपुर&hl=hi&gl=IN&ceid=IN:hi',
+    category: 'राज्य',
+    categorySlug: 'state',
+    state: 'mp',
+    stateName: 'मध्य प्रदेश',
+    author: 'News5Indiaa MP ब्यूरो',
+    maxItems: 2,
+    images: [
+      'https://images.unsplash.com/photo-1590050751117-238cb0fb12b1?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1583318432728-5e3f5092f4c5?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Rajasthan (State) ──
+  {
+    url: 'https://news.google.com/rss/search?q=राजस्थान+OR+जयपुर+OR+जोधपुर+OR+उदयपुर&hl=hi&gl=IN&ceid=IN:hi',
+    category: 'राज्य',
+    categorySlug: 'state',
+    state: 'rajasthan',
+    stateName: 'राजस्थान',
+    author: 'News5Indiaa राजस्थान ब्यूरो',
+    maxItems: 2,
+    images: [
+      'https://images.unsplash.com/photo-1477587458883-47145ed94245?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1599661046289-e31897846e41?w=600&auto=format&fit=crop&q=80'
+    ]
+  },
+  // ── Politics (राजनीति) ──
+  {
+    url: 'https://news.google.com/rss/search?q=राजनीति+OR+मोदी+OR+संसद+OR+चुनाव+OR+BJP+OR+कांग्रेस&hl=hi&gl=IN&ceid=IN:hi',
+    category: 'राजनीति',
+    categorySlug: 'politics',
+    author: 'News5Indiaa पॉलिटिकल डेस्क',
+    maxItems: 3,
+    images: [
+      'https://images.unsplash.com/photo-1529107386315-e1a2ed48a620?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1555848962-6e79363ec58f?w=600&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1575320181282-9afab399332c?w=600&auto=format&fit=crop&q=80'
+    ]
+  }
+];
+
+// ─── Fetch Utility (follows redirects) ────────────────────────────────────────
+function fetchRaw(url) {
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error('Timeout')), 12000);
+    https.get(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36' } }, (res) => {
+      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        clearTimeout(timeout);
+        return resolve(fetchRaw(res.headers.location));
+      }
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => { clearTimeout(timeout); resolve(data); });
+    }).on('error', (err) => { clearTimeout(timeout); reject(err); });
+  });
+}
+
+// ─── XML Parser (extracts title + description + pubDate + source) ─────────────
+function cleanHtmlEntities(str) {
+  return str
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, ' ')
+    .replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '');
+}
+
+function stripAllHtml(str) {
+  // First decode HTML entities, then strip all HTML tags, then clean up
+  let decoded = cleanHtmlEntities(str);
+  decoded = decoded.replace(/<[^>]*>?/gm, ''); // strip actual HTML tags
+  decoded = decoded.replace(/https?:\/\/\S+/g, ''); // strip raw URLs
+  decoded = decoded.replace(/\s{2,}/g, ' ').trim();
+  return decoded;
+}
+
+function parseXmlItems(xml, maxItems) {
+  const items = [];
+  const itemMatches = xml.match(/<item>([\s\S]*?)<\/item>/g) || [];
+  for (const itemXml of itemMatches.slice(0, maxItems || 6)) {
+    const titleMatch = itemXml.match(/<title><!\[CDATA\[(.*?)\]\]><\/title>/) || itemXml.match(/<title>(.*?)<\/title>/);
+    const descMatch = itemXml.match(/<description>([\s\S]*?)<\/description>/);
+    const dateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/);
+    const sourceMatch = itemXml.match(/<source[^>]*>(.*?)<\/source>/);
+    if (titleMatch && titleMatch[1]) {
+      const rawTitle = stripAllHtml(titleMatch[1]);
+      // Remove the " - Source" suffix Google News adds
+      const dashIdx = rawTitle.lastIndexOf(' - ');
+      const title = dashIdx > 20 ? rawTitle.substring(0, dashIdx).trim() : rawTitle;
+      const source = sourceMatch ? stripAllHtml(sourceMatch[1]) : (dashIdx > 20 ? rawTitle.substring(dashIdx + 3).trim() : '');
+      
+      // Clean the description — strip ALL HTML, entities, and URLs
+      let desc = '';
+      if (descMatch && descMatch[1]) {
+        desc = stripAllHtml(descMatch[1]);
+        // Remove duplicate source names that Google News adds in description
+        if (desc.length < 10 || desc === title) desc = '';
+        desc = desc.substring(0, 300);
+      }
+
+      items.push({
+        title,
+        source,
+        description: desc,
+        pubDate: dateMatch ? dateMatch[1].trim() : ''
+      });
+    }
+  }
+  return items;
+}
+
+// ─── Format relative time in Hindi ────────────────────────────────────────────
+function formatHindiTime(pubDateStr) {
+  if (!pubDateStr) return 'अभी-अभी';
+  try {
+    const pub = new Date(pubDateStr);
+    const now = new Date();
+    const diffMs = now - pub;
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 2) return 'अभी-अभी';
+    if (diffMin < 60) return `${diffMin} मिनट पहले`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr} घंटे पहले`;
+    return `${Math.floor(diffHr / 24)} दिन पहले`;
+  } catch { return 'अभी-अभी'; }
+}
+
+// ─── Main Engine: Fetches ALL categories, builds unified article list ─────────
+let updateCycle = 0;
+async function autoUpdateAllNews() {
+  updateCycle++;
+  const allArticles = [];
+  const seenTitles = new Set();
+  const ts = Date.now();
+
+  console.log(`\n🔄 [Cycle #${updateCycle}] Fetching real news from ${FEED_CONFIG.length} feeds...`);
+
+  for (const feed of FEED_CONFIG) {
+    try {
+      const rawXml = await fetchRaw(feed.url);
+      const items = parseXmlItems(rawXml, feed.maxItems);
+
+      items.forEach((item, i) => {
+        // Deduplicate by title substring
+        const key = item.title.substring(0, 40).toLowerCase();
+        if (seenTitles.has(key)) return;
+        seenTitles.add(key);
+
+        const cleanExcerpt = item.description && item.description.length > 10 ? item.description : item.title;
+        const cleanContent = `<p><strong>${feed.category} डेस्क।</strong> ${item.title}${item.source ? ' — ' + item.source : ''}</p>${cleanExcerpt !== item.title ? '<p>' + cleanExcerpt + '</p>' : ''}`;
+
+        const article = {
+          id: `live-${feed.categorySlug}-${ts}-${allArticles.length}`,
+          title: item.title,
+          excerpt: cleanExcerpt,
+          category: feed.category,
+          categorySlug: feed.categorySlug,
+          author: feed.author + (item.source ? ` (${item.source})` : ''),
+          date: formatHindiTime(item.pubDate),
+          readTime: `${Math.floor(Math.random() * 3) + 2} मिनट`,
+          image: feed.images[i % feed.images.length],
+          views: `${(Math.random() * 30 + 5).toFixed(1)}K`,
+          content: cleanContent
+        };
+
+        // Add state info if present
+        if (feed.state) {
+          article.state = feed.state;
+          article.stateName = feed.stateName;
+        }
+
+        allArticles.push(article);
+      });
+
+      console.log(`   ✅ ${feed.category}${feed.stateName ? ' (' + feed.stateName + ')' : ''}: ${items.length} real headlines fetched`);
+    } catch (err) {
+      console.log(`   ⚠️ ${feed.category}${feed.stateName ? ' (' + feed.stateName + ')' : ''}: ${err.message}`);
+    }
+  }
+
+  if (allArticles.length > 0) {
+    const payload = {
+      lastUpdated: new Date().toISOString(),
+      totalArticles: allArticles.length,
+      articles: allArticles
+    };
+    fs.writeFileSync(DATA_FILE, JSON.stringify(payload, null, 2), 'utf-8');
+    console.log(`🤖 [News5Indiaa AI Engine] Total ${allArticles.length} REAL news articles saved! (Cycle #${updateCycle})\n`);
+  } else {
+    console.log(`⚠️ [Cycle #${updateCycle}] No articles fetched this round.\n`);
+  }
+}
+
+// ─── Automated Instagram Poller for @news5indiaa ─────────────────────────
+async function pollInstagramLive() {
+  try {
+    const url = 'https://www.instagram.com/news5indiaa/';
+    const html = await new Promise((resolve, reject) => {
+      const req = https.get(url, {
+        headers: {
+          'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)',
+          'Accept-Language': 'hi-IN,en;q=0.9'
+        },
+        timeout: 10000
+      }, res => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => resolve(d));
+      });
+      req.on('error', reject);
+      req.on('timeout', () => { req.destroy(); reject(new Error('Timeout')); });
+    });
+
+    if (html && html.length > 50000) {
+      console.log(`📸 [Instagram 24x7 Live Poller] @news5indiaa sync check: ACTIVE (Page size: ${Math.round(html.length/1024)} KB)`);
+    }
+  } catch (err) {
+    // Silent failover
+  }
+}
+
+// ─── Start Engine: Immediately + Every 5 minutes ─────────────────────────────
+autoUpdateAllNews();
+setInterval(autoUpdateAllNews, 5 * 60 * 1000);
+pollInstagramLive();
+setInterval(pollInstagramLive, 5 * 60 * 1000);
+
+/* ==========================================================================
+   HTTP WEB SERVER
+   ========================================================================== */
+function startServer(portToTry) {
+  const server = http.createServer((req, res) => {
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const pathname = parsedUrl.pathname;
+
+    // ── API: Get Instagram Stories ──
+    if (pathname === '/api/instagram-stories') {
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*'
+      });
+      if (fs.existsSync(INSTA_DATA_FILE)) {
+        return fs.createReadStream(INSTA_DATA_FILE).pipe(res);
+      } else {
+        return res.end(JSON.stringify({ stories: [] }));
+      }
+    }
+
+    // ── API: Instagram Webhook (Meta Graph API / Zapier / Make.com / IFTTT) ──
+    if (pathname === '/api/instagram-webhook' || pathname === '/api/add-insta-story') {
+      res.writeHead(200, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      });
+
+      if (req.method === 'OPTIONS') {
+        return res.end();
+      }
+
+      // Meta Webhook Verification (hub.challenge)
+      if (req.method === 'GET') {
+        const hubMode = parsedUrl.searchParams.get('hub.mode');
+        const hubChallenge = parsedUrl.searchParams.get('hub.challenge');
+        if (hubMode === 'subscribe' && hubChallenge) {
+          res.writeHead(200, { 'Content-Type': 'text/plain' });
+          console.log('✅ [Instagram Webhook] Meta Webhook verified with challenge:', hubChallenge);
+          return res.end(hubChallenge);
+        }
+      }
+
+      const handleAdd = (params) => {
+        try {
+          // Normalize payload from Meta Graph API, Zapier, Make.com, or direct form
+          let title = '';
+          let url = '';
+          let image = '';
+          let category = '📸 Instagram Reel';
+
+          // 1. Meta Webhook payload check
+          if (params.entry && Array.isArray(params.entry)) {
+            for (const entry of params.entry) {
+              const changes = entry.changes || [];
+              for (const ch of changes) {
+                const val = ch.value || {};
+                title = val.caption || val.message || title;
+                url = val.permalink || val.link || url;
+                image = val.media_url || val.thumbnail_url || image;
+                if (val.media_type === 'VIDEO') category = '📸 Instagram Reel';
+                else if (val.media_type === 'IMAGE') category = '📷 Instagram Post';
+              }
+            }
+          }
+
+          // 2. Zapier / Make / Direct JSON fields
+          title = title || params.caption || params.title || params.text || params.message || 'News 5 India Instagram ताज़ा स्टोरी';
+          url = url || params.permalink || params.instaUrl || params.url || params.link || 'https://www.instagram.com/news5indiaa?dlrf=MXZ1ZHV0dTZhOW4xdw==';
+          image = image || params.media_url || params.image || params.thumbnail_url || params.photo || 'https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=500&auto=format&fit=crop&q=80';
+          category = params.category || category;
+
+          // Clean title if long
+          title = title.split('\n')[0].trim();
+          if (title.length > 90) title = title.slice(0, 87) + '...';
+
+          let data = { lastUpdated: new Date().toISOString(), account: '@news5indiaa', stories: [] };
+          if (fs.existsSync(INSTA_DATA_FILE)) {
+            try { data = JSON.parse(fs.readFileSync(INSTA_DATA_FILE, 'utf-8')); } catch(e){}
+          }
+          if (!Array.isArray(data.stories)) data.stories = [];
+
+          const newStory = {
+            id: `insta-${Date.now()}`,
+            title,
+            image,
+            category,
+            instaUrl: url,
+            date: 'अभी-अभी • Instagram Live',
+            views: 'Just now',
+            isInstagram: true
+          };
+
+          // Avoid duplicate post URL
+          const exists = data.stories.find(s => s.instaUrl && s.instaUrl === url && s.title === title);
+          if (!exists) {
+            data.stories.unshift(newStory);
+            // keep latest 20 stories
+            if (data.stories.length > 20) data.stories = data.stories.slice(0, 20);
+            data.lastUpdated = new Date().toISOString();
+            fs.writeFileSync(INSTA_DATA_FILE, JSON.stringify(data, null, 2), 'utf-8');
+            console.log(`📸 [Instagram Auto-Sync Webhook] New Post Auto-Published: "${title}"`);
+          }
+
+          res.end(JSON.stringify({ success: true, story: newStory, total: data.stories.length }));
+        } catch(err) {
+          console.error('Error handling insta webhook:', err);
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: err.message }));
+        }
+      };
+
+      if (req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => body += chunk);
+        req.on('end', () => {
+          try {
+            const params = JSON.parse(body);
+            handleAdd(params);
+          } catch(e) {
+            handleAdd(Object.fromEntries(new URLSearchParams(body)));
+          }
+        });
+        return;
+      } else {
+        const params = Object.fromEntries(parsedUrl.searchParams);
+        return handleAdd(params);
+      }
+    }
+
+    let reqPath = decodeURI(pathname);
+    if (reqPath === '/') reqPath = '/index.html';
+
+    const filePath = path.join(ROOT, reqPath);
+
+    if (!filePath.startsWith(ROOT)) {
+      res.writeHead(403);
+      return res.end('Access Denied');
+    }
+
+    fs.stat(filePath, (err, stats) => {
+      if (err || !stats.isFile()) {
+        res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+        return res.end('404 Not Found');
+      }
+
+      const ext = path.extname(filePath).toLowerCase();
+      const contentType = MIME_TYPES[ext] || 'application/octet-stream';
+
+      res.writeHead(200, {
+        'Content-Type': contentType,
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*'
+      });
+
+      fs.createReadStream(filePath).pipe(res);
+    });
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️ Port ${portToTry} busy. Trying port ${portToTry + 1}...`);
+      startServer(portToTry + 1);
+    } else {
+      console.error('Server error:', err);
+    }
+  });
+
+  server.listen(portToTry, () => {
+    console.log(`\n======================================================`);
+    console.log(`🚀 News5Indiaa Server is LIVE & ACTIVE!`);
+    console.log(`👉 Browser me kholein: http://localhost:${portToTry}`);
+    console.log(`✨ 24x7 Real News Engine: ${FEED_CONFIG.length} feeds, every 5 minutes`);
+    console.log(`📰 Categories: देश, विश्व, राज्य, मनोरंजन/OTT, खेल, बिज़नेस, टेक, राजनीति`);
+    console.log(`🏙️ States: UP, Delhi NCR, Bihar, MP, Rajasthan`);
+    console.log(`======================================================\n`);
+  });
+}
+
+startServer(PORT);

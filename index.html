@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="hi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>News5Indiaa - सच का पहरेदार | ताज़ा समाचार, बड़ी खबरें और लाइव अपडेट्स</title>
+  <meta name="description" content="News5Indiaa: देश, दुनिया, राजनीति, क्रिकेट, मनोरंजन, बिज़नेस और अपने राज्य की सबसे सटीक और निष्पक्ष खबरें।">
+  <meta name="keywords" content="News5Indiaa, Hindi News, Latest News in Hindi, Breaking News, Jagran style news, National News, Cricket Score">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/jpeg" href="assets/logo-badge.jpg">
+  <link rel="apple-touch-icon" href="assets/logo-badge.jpg">
+
+  <!-- Modern Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@300;400;500;600;700;800&family=Rozha+One&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Top Utility Bar (Dainik Jagran Style) -->
+  <aside class="top-bar" aria-label="त्वरित सूचना और सेटिंग्स">
+    <div class="container top-bar-inner">
+      <div class="top-bar-left">
+        <span class="live-date" id="liveDate">रविवार, 25 अक्टूबर 2026</span>
+        <span class="separator">•</span>
+        <div class="edition-selector">
+          <span class="edition-pin">📍</span>
+          <select id="editionSelect" class="edition-dropdown" title="अपना शहर चुनें">
+            <option value="delhi">दिल्ली (NCR)</option>
+            <option value="lucknow">लखनऊ (UP)</option>
+            <option value="patna">पटना (बिहार)</option>
+            <option value="bhopal">भोपाल (MP)</option>
+            <option value="jaipur">जयपुर (राजस्थान)</option>
+            <option value="mumbai">मुंबई (महाराष्ट्र)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="top-bar-right">
+        <!-- Weather pill -->
+        <div class="weather-pill" title="वर्तमान मौसम">
+          <span class="weather-icon">☀️</span>
+          <span class="weather-temp">28°C नई दिल्ली</span>
+        </div>
+
+        <!-- Font size scaler -->
+        <div class="font-controls" title="फॉन्ट का आकार बदलें">
+          <button type="button" id="btnFontDec" class="font-btn" aria-label="फॉन्ट छोटा करें">A-</button>
+          <button type="button" id="btnFontInc" class="font-btn" aria-label="फॉन्ट बड़ा करें">A+</button>
+        </div>
+
+        <!-- Theme toggle -->
+        <button type="button" id="themeToggleBtn" class="theme-toggle" aria-label="डार्क मोड बदलें" title="डार्क/लाइट मोड">
+          <span class="theme-icon" id="themeIcon">🌙</span>
+        </button>
+
+        <!-- Live TV Trigger -->
+        <button type="button" id="btnTopLiveTv" class="live-tv-badge pulse-badge" aria-label="लाइव टीवी देखें">
+          <span class="live-dot"></span> LIVE TV
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Header -->
+  <header class="main-header" id="mainHeader">
+    <div class="container header-inner">
+      <div class="header-left">
+        <!-- Hamburger Menu Button -->
+        <button type="button" id="hamburgerBtn" class="icon-btn menu-btn" aria-label="मुख्य मेन्यू खोलें">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+        </button>
+
+        <!-- Brand Identity (Official NEWS 5 INDIA) -->
+        <a href="#" class="brand-logo" id="homeLogoLink" aria-label="News 5 India होम पेज">
+          <img src="assets/logo-badge.jpg" alt="News 5 India Emblem" class="brand-badge-img" />
+          <div class="brand-text-block">
+            <div class="brand-title">
+              <span class="brand-news">NEWS</span>
+              <span class="brand-five-badge">5</span>
+              <span class="brand-india">INDIA</span>
+            </div>
+            <span class="brand-tagline">हर खबर, आपके साथ</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Header Actions -->
+      <div class="header-actions">
+        <!-- Search Trigger -->
+        <button type="button" id="searchTriggerBtn" class="icon-btn search-btn" aria-label="समाचार खोजें" title="सर्च करें">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <span class="btn-label-desktop">सर्च</span>
+        </button>
+
+        <!-- E-Paper CTA -->
+        <a href="#epaper" class="header-cta epaper-cta" id="epaperBtn" title="ई-पेपर पढ़ें">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          <span>ई-पेपर</span>
+        </a>
+
+        <!-- Live TV Header Button -->
+        <button type="button" id="btnHeaderLiveTv" class="header-livetv-btn" aria-label="लाइव प्रसारण देखें">
+          <span class="live-dot-red"></span>
+          <span>लाइव प्रसारण</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Search Overlay Bar -->
+    <div class="search-overlay" id="searchOverlay" hidden>
+      <div class="container search-overlay-inner">
+        <div class="search-input-wrap">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="search" id="globalSearchInput" placeholder="समाचार, शहर या मुद्दा खोजें (जैसे: बजट, क्रिकेट, यूपी)..." autocomplete="off" />
+          <button type="button" id="clearSearchBtn" class="clear-search" aria-label="सर्च साफ करें">✕</button>
+        </div>
+        <button type="button" id="closeSearchBtn" class="btn-text close-search">बंद करें</button>
+      </div>
+      <div id="searchSuggestions" class="search-suggestions container">
+        <span class="suggest-label">ट्रेंडिंग सर्च:</span>
+        <button type="button" class="tag-pill" data-search="चंद्रयान-4">चंद्रयान-4</button>
+        <button type="button" class="tag-pill" data-search="क्रिकेट">क्रिकेट स्कोर</button>
+        <button type="button" class="tag-pill" data-search="बजट">बजट 2026</button>
+        <button type="button" class="tag-pill" data-search="अयोध्या">अयोध्या दीपोत्सव</button>
+        <button type="button" class="tag-pill" data-search="इंदौर">इंदौर स्वच्छता</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Sticky Category Navigation Bar (Dainik Jagran Style) -->
+  <nav class="nav-bar sticky-nav" aria-label="समाचार श्रेणियां">
+    <div class="container nav-scroll-container">
+      <ul class="nav-list" id="categoryNav">
+        <li class="nav-item active"><button type="button" class="nav-link" data-category="all">होम</button></li>
+        <li class="nav-item"><button type="button" class="nav-link badge-link" data-category="breaking"><span class="nav-fire">⚡</span> बड़ी खबर</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="national">देश</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="state">राज्य / शहर</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="politics">राजनीति</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="sports">क्रिकेट / खेल</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="entertainment">मनोरंजन</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="business">बिज़नेस</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="tech">टेक व ऑटो</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="videos">वीडियो</button></li>
+        <li class="nav-item"><button type="button" class="nav-link" data-category="webstories">वेब स्टोरीज़</button></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Breaking News Ticker (ताज़ा खबर बार) -->
+  <div class="breaking-ticker-wrap" aria-label="ताज़ा खबर टिकर">
+    <div class="container ticker-inner">
+      <div class="ticker-badge">
+        <span class="ticker-pulse"></span>
+        <span class="ticker-text">बड़ी खबर</span>
+      </div>
+      <div class="ticker-content" id="tickerContainer">
+        <div class="ticker-slider" id="tickerSlider">
+          <div class="ticker-item active" data-ticker-id="b1">
+            <span class="ticker-cat">देश</span>
+            <span class="ticker-headline">चंद्रयान-4 मिशन को लेकर ISRO का बड़ा अपडेट: चंद्रमा के दक्षिणी ध्रुव से सैंपल लाने की रूपरेखा तैयार</span>
+          </div>
+          <div class="ticker-item" data-ticker-id="b2">
+            <span class="ticker-cat">क्रिकेट</span>
+            <span class="ticker-headline">भारत-ऑस्ट्रेलिया बॉर्डर-गावस्कर ट्रॉफी: मेलबर्न में दूसरा टेस्ट, भारत ने टॉस जीतकर चुनी बल्लेबाजी</span>
+          </div>
+          <div class="ticker-item" data-ticker-id="b3">
+            <span class="ticker-cat">राजनीति</span>
+            <span class="ticker-headline">संसद का बजट सत्र: वित्त मंत्री ने पेश की आर्थिक विकास की नई रूपरेखा, डिजिटल इंफ्रास्ट्रक्चर पर जोर</span>
+          </div>
+          <div class="ticker-item" data-ticker-id="b4">
+            <span class="ticker-cat">राज्य</span>
+            <span class="ticker-headline">उत्तर प्रदेश में 6 एक्सप्रेसवे से जुड़ेंगे 22 नए औद्योगिक गलियारे, लाखों युवाओं को रोजगार के अवसर</span>
+          </div>
+          <div class="ticker-item" data-ticker-id="b5">
+            <span class="ticker-cat">बिज़नेस</span>
+            <span class="ticker-headline">शेयर बाजार में रिकॉर्ड उछाल: सेंसेक्स पहली बार 85,000 के पार, निफ्टी में भी जबरदस्त तेजी</span>
+          </div>
+        </div>
+      </div>
+      <div class="ticker-controls">
+        <button type="button" id="tickerPrevBtn" class="ticker-ctrl-btn" aria-label="पिछली खबर">‹</button>
+        <button type="button" id="tickerPlayPauseBtn" class="ticker-ctrl-btn" aria-label="रोके या चलाएं">⏸</button>
+        <button type="button" id="tickerNextBtn" class="ticker-ctrl-btn" aria-label="अगली खबर">›</button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Live Cricket Score Strip -->
+  <div class="cricket-strip" id="cricketStrip">
+    <div class="container cricket-inner">
+      <div class="cricket-header">
+        <span class="cricket-ball-icon">🏏</span>
+        <span class="cricket-title" id="cricketTournament">बॉर्डर-गावस्कर ट्रॉफी 2026 (2nd Test)</span>
+        <span class="live-chip" id="cricketStatus">🔴 LIVE</span>
+      </div>
+      <div class="cricket-teams">
+        <div class="team-score"><span class="team-flag">🇮🇳</span> <strong>IND:</strong> <span id="team1Score">324/5 (84.2 ov)</span></div>
+        <span class="vs-text">बनाम</span>
+        <div class="team-score"><span class="team-flag">🇦🇺</span> <strong>AUS:</strong> <span id="team2Score">280 (All Out)</span></div>
+      </div>
+      <div class="cricket-note" id="cricketNote">भारत 44 रनों से आगे • कोहली 114*(182), राहुल 42*(90)</div>
+    </div>
+  </div>
+
+  <!-- Main Content Layout -->
+  <main class="main-body container" id="mainContent">
+    <div class="portal-grid">
+      <!-- Left Column (70%) -->
+      <section class="feed-column">
+
+        <!-- Active Filter Indicator -->
+        <div class="filter-header" id="filterHeader" style="display:none;">
+          <h2 class="filter-title" id="filterTitle">श्रेणी: </h2>
+          <button type="button" id="clearFilterBtn" class="btn-clear-filter">सभी समाचार देखें ✕</button>
+        </div>
+
+        <!-- Lead Story (बड़ी खबरें) -->
+        <article class="lead-card" id="leadStoryContainer">
+          <!-- Injected dynamically -->
+        </article>
+
+        <!-- Hyperlocal State News Tab Bar -->
+        <section class="state-hub-section" id="stateHub">
+          <div class="section-title-wrap">
+            <h2 class="section-title">
+              <span class="title-bar red-bar"></span>
+              <span>आपका राज्य और शहर</span>
+            </h2>
+            <div class="state-chips" id="stateChips">
+              <button type="button" class="state-chip active" data-state="all">सभी राज्य</button>
+              <button type="button" class="state-chip" data-state="up">उत्तर प्रदेश</button>
+              <button type="button" class="state-chip" data-state="bihar">बिहार</button>
+              <button type="button" class="state-chip" data-state="delhi">दिल्ली NCR</button>
+              <button type="button" class="state-chip" data-state="mp">मध्य प्रदेश</button>
+              <button type="button" class="state-chip" data-state="rajasthan">राजस्थान</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Articles Feed Grid -->
+        <section class="news-feed-section">
+          <div class="news-cards-grid" id="newsCardsGrid">
+            <!-- Injected dynamically -->
+          </div>
+        </section>
+
+        <!-- Instagram Visual Stories Section -->
+        <section class="webstories-section" id="webStoriesSection">
+          <div class="section-title-wrap">
+            <h2 class="section-title">
+              <span class="title-bar insta-bar"></span>
+              <span>Instagram विज़ुअल स्टोरीज़</span>
+              <span class="insta-live-sync-pill" title="24x7 Instagram ऑटो-सिंक सक्रिय है">
+                <span class="live-dot-pulse"></span>
+                <span>AUTO-SYNC LIVE</span>
+              </span>
+            </h2>
+            <div class="stories-header-actions">
+              <button type="button" class="btn-insta-sync-guide" id="openAddInstaModalBtn" title="Instagram ऑटो-सिंक सेंटर">
+                <span>⚡ ऑटो-सिंक सेंटर</span>
+              </button>
+              <a href="https://www.instagram.com/news5indiaa?dlrf=MXZ1ZHV0dTZhOW4xdw==" target="_blank" rel="noopener noreferrer" class="btn-insta-pill" title="News 5 India Instagram पेज देखें">
+                <span class="insta-cam-icon">📸</span>
+                <span>@news5indiaa</span>
+                <span class="arrow-ext">↗</span>
+              </a>
+            </div>
+          </div>
+          <div class="webstories-carousel" id="webStoriesTrack">
+            <!-- Injected dynamically from Instagram Stories Feed -->
+          </div>
+        </section>
+
+        <!-- Multimedia & Videos Section -->
+        <section class="video-section" id="videoSection">
+          <div class="section-title-wrap">
+            <h2 class="section-title">
+              <span class="title-bar red-bar"></span>
+              <span>News5Indiaa वीडियो बुलेटिन</span>
+            </h2>
+            <button type="button" class="btn-link" id="viewAllVideosBtn">सभी वीडियो देखें ›</button>
+          </div>
+          <div class="video-grid" id="videoGrid">
+            <!-- Injected dynamically -->
+          </div>
+        </section>
+      </section>
+
+      <!-- Right Column / Sidebar (30%) -->
+      <aside class="sidebar-column" aria-label="ट्रेंडिंग और विशेष">
+        
+        <!-- News 5 India Studio Photo Card -->
+        <div class="sidebar-card studio-spotlight-card">
+          <div class="studio-photo-frame">
+            <img src="assets/studio-live.jpg" alt="News 5 India न्यूज़ स्टूडियो" class="studio-clean-photo" />
+          </div>
+        </div>
+
+        <!-- Most Read / Trending Top 5 -->
+        <div class="sidebar-card trending-card">
+          <div class="card-heading">
+            <span class="fire-icon">🔥</span>
+            <h3>सबसे ज्यादा पढ़ी गई खबरें</h3>
+          </div>
+          <ol class="trending-list" id="trendingList">
+            <!-- Injected dynamically -->
+          </ol>
+        </div>
+
+        <!-- E-Paper Card -->
+        <div class="sidebar-card epaper-promo-card">
+          <div class="promo-badge">डिजिटल संस्करण</div>
+          <h4>News5Indiaa ई-पेपर</h4>
+          <p>दैनिक समाचार पत्र का डिजिटल रूप, हर सुबह 5 बजे सीधे आपके मोबाइल पर।</p>
+          <button type="button" class="promo-cta-btn" id="openEpaperModalBtn">आज का ई-पेपर पढ़ें</button>
+        </div>
+
+        <!-- Instagram Official Channel Ad Card -->
+        <a href="https://www.instagram.com/news5indiaa?dlrf=MXZ1ZHV0dTZhOW4xdw==" target="_blank" rel="noopener noreferrer" class="sidebar-card social-ad-card insta-ad-card" title="News 5 India Instagram पर फॉलो करें">
+          <div class="social-ad-content">
+            <div class="social-ad-header">
+              <div class="social-ad-icon-wrap">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+              </div>
+              <div class="social-ad-title-group">
+                <span class="social-ad-badge">Instagram पर जुड़ें</span>
+                <strong class="social-ad-handle">@news5indiaa</strong>
+              </div>
+            </div>
+            <p class="social-ad-desc">ताज़ा रील्स, ब्रेकिंग वीडियो और ग्राउंड रिपोर्ट्स के लिए हमें अभी फॉलो करें।</p>
+            <div class="social-ad-btn">इंस्टाग्राम पर फॉलो करें ›</div>
+          </div>
+        </a>
+
+        <!-- Facebook Official Page Ad Card -->
+        <a href="https://www.facebook.com/share/1FQHWjjX8e/" target="_blank" rel="noopener noreferrer" class="sidebar-card social-ad-card fb-ad-card" title="News 5 India Facebook पेज पर जुड़ें">
+          <div class="social-ad-content">
+            <div class="social-ad-header">
+              <div class="social-ad-icon-wrap">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+              </div>
+              <div class="social-ad-title-group">
+                <span class="social-ad-badge">Facebook Page</span>
+                <strong class="social-ad-handle">News 5 India Official</strong>
+              </div>
+            </div>
+            <p class="social-ad-desc">लाइव डिबेट, देश-दुनिया की बड़ी खबरें और स्पेशल रिपोर्ट से जुड़ें।</p>
+            <div class="social-ad-btn">फेसबुक पर लाइक करें ›</div>
+          </div>
+        </a>
+
+        <!-- WhatsApp Channel Alert Banner -->
+        <div class="sidebar-card whatsapp-promo-card">
+          <div class="wa-icon">💬</div>
+          <div class="wa-text">
+            <strong>News5Indiaa WhatsApp चैनल</strong>
+            <p>ताज़ा ब्रेकिंग न्यूज़ सीधे अपने व्हाट्सएप पर पाएं।</p>
+          </div>
+          <button type="button" class="wa-btn" id="waJoinBtn">जुड़ें (Join)</button>
+        </div>
+
+        <!-- Quick Opinion Poll Widget -->
+        <div class="sidebar-card poll-card" id="pollCard">
+          <div class="card-heading">
+            <span class="poll-icon">📊</span>
+            <h3>जनता की राय (ओपिनियन पोल)</h3>
+          </div>
+          <p class="poll-question">क्या भारत आगामी 5 वर्षों में दुनिया की तीसरी सबसे बड़ी अर्थव्यवस्था बनने में सफल रहेगा?</p>
+          <div class="poll-options" id="pollOptions">
+            <button type="button" class="poll-opt-btn" data-vote="yes">हां, निश्चित रूप से</button>
+            <button type="button" class="poll-opt-btn" data-vote="no">संभव नहीं है</button>
+            <button type="button" class="poll-opt-btn" data-vote="maybe">कह नहीं सकते</button>
+          </div>
+          <div class="poll-result" id="pollResult" style="display: none;">
+            <div class="poll-bar-group">
+              <div class="bar-label"><span>हां (78%)</span><span>78%</span></div>
+              <div class="bar-track"><div class="bar-fill fill-green" style="width: 78%;"></div></div>
+            </div>
+            <div class="poll-bar-group">
+              <div class="bar-label"><span>नहीं (14%)</span><span>14%</span></div>
+              <div class="bar-track"><div class="bar-fill fill-red" style="width: 14%;"></div></div>
+            </div>
+            <div class="poll-bar-group">
+              <div class="bar-label"><span>कह नहीं सकते (8%)</span><span>8%</span></div>
+              <div class="bar-track"><div class="bar-fill fill-gray" style="width: 8%;"></div></div>
+            </div>
+            <span class="poll-voted-thanks">आपकी राय दर्ज कर ली गई है! कुल वोट: 45,820</span>
+          </div>
+        </div>
+
+        <!-- Commercial Sponsored Ad 1 (Auto/EV Festival Offer) -->
+        <div class="sidebar-card display-ad-card">
+          <div class="ad-tag-strip">
+            <span class="ad-label">विज्ञापन</span>
+            <span class="ad-sponsor">प्रायोजित • Auto Spotlight</span>
+          </div>
+          <div class="display-ad-body">
+            <div class="display-ad-img-wrap">
+              <img src="https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=600&auto=format&fit=crop&q=80" alt="New EV SUV Festival Offer" class="display-ad-img" loading="lazy" />
+              <span class="ad-badge-ribbon">फेस्टिवल ऑफर</span>
+            </div>
+            <div class="display-ad-info">
+              <h4 class="display-ad-title">नई जेनरेशन स्मार्ट इलेक्ट्रिक SUV: 620 किमी रेंज और ₹1.75 लाख का विशेष डिस्काउंट</h4>
+              <p class="display-ad-desc">ज़ीरो एमिशन, AI ड्राइव असिस्ट और 15 मिनट अल्ट्रा-फास्ट चार्जिंग। आज ही टेस्ट ड्राइव बुक करें।</p>
+              <div class="display-ad-action">
+                <span class="ad-price-tag">कीमत: ₹14.99 लाख* से</span>
+                <a href="#testdrive" class="btn-ad-cta" onclick="event.preventDefault(); alert('News 5 India पार्टनर ऑटो ऑफर: डीलरशिप संपर्क नंबर +91 98765 43210');">ऑफर देखें ›</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Official News 5 India Mobile App Download Card -->
+        <div class="sidebar-card app-download-card">
+          <div class="ad-tag-strip">
+            <span class="ad-label">मोबाइल ऐप</span>
+            <span class="ad-sponsor">Official • News 5 India</span>
+          </div>
+          <div class="app-ad-content">
+            <div class="app-ad-badge-row">
+              <img src="assets/logo-badge.jpg" alt="News 5 India App" class="app-icon-img" />
+              <div>
+                <strong>News 5 India न्यूज़ ऐप</strong>
+                <span>⭐⭐⭐⭐⭐ 4.8 रेटिंग • 10 लाख+ डाउनलोड</span>
+              </div>
+            </div>
+            <p class="app-ad-desc">हर ब्रेकिंग न्यूज़ 10 सेकंड में, लाइव ऑडियो बुलेटिन और पर्सनलाइज्ड नोटिफिकेशन सीधे अपने मोबाइल पर पाएं।</p>
+            <div class="app-store-btns">
+              <button type="button" class="store-btn" onclick="alert('Google Play Store पर News 5 India ऐप जल्द उपलब्ध होगा!');">
+                <span class="store-icon">▶</span>
+                <div class="store-text">
+                  <small>GET IT ON</small>
+                  <strong>Google Play</strong>
+                </div>
+              </button>
+              <button type="button" class="store-btn" onclick="alert('Apple App Store पर News 5 India ऐप जल्द उपलब्ध होगा!');">
+                <span class="store-icon">🍎</span>
+                <div class="store-text">
+                  <small>Download on the</small>
+                  <strong>App Store</strong>
+                </div>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sticky Bottom Sponsored Ad (Scrolls along with page so right side is never empty) -->
+        <div class="sidebar-card sticky-sponsor-ad" id="stickySponsorAd">
+          <div class="ad-tag-strip">
+            <span class="ad-label">विशेष विज्ञापन</span>
+            <span class="ad-sponsor">Media Partnerships 2026</span>
+          </div>
+          <div class="sticky-ad-visual">
+            <div class="sticky-ad-brand">
+              <span class="sticky-logo-pill">NEWS 5 INDIA</span>
+              <h4>अपने ब्रांड का विज्ञापन दें News 5 India पर</h4>
+              <p>वेबसाइट, मोबाइल ऐप और लाइव वीडियो बुलेटिन पर डिजिटल विज्ञापन स्लॉट उपलब्ध।</p>
+              <ul class="sticky-ad-perks">
+                <li>✓ होमपेज बैनर व प्रायोजित लेख</li>
+                <li>✓ सोशल मीडिया (Insta/FB) प्रमोशन</li>
+                <li>✓ 24x7 टार्गेटेड ऑडियंस रीच</li>
+              </ul>
+              <a href="mailto:ads@news5india.com" class="btn-sticky-cta" onclick="event.preventDefault(); alert('विज्ञापन बुकिंग एवं मीडिया किट के लिए संपर्क करें:\nईमेल: ads@news5indiaa.com\nफोन: +91 98765 00005');">विज्ञापन के लिए संपर्क करें ›</a>
+            </div>
+          </div>
+        </div>
+
+      </aside>
+    </div>
+  </main>
+
+  <!-- Mobile Drawer -->
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="mobile-drawer" id="mobileDrawer" aria-hidden="true">
+    <div class="drawer-header">
+      <div class="drawer-logo">
+        <img src="assets/logo-badge.jpg" alt="News 5 India" class="drawer-logo-img" />
+        <span class="brand-title">NEWS 5 INDIA</span>
+      </div>
+      <button type="button" id="closeDrawerBtn" class="close-drawer" aria-label="मेन्यू बंद करें">✕</button>
+    </div>
+    <div class="drawer-body">
+      <div class="drawer-section">
+        <h4 class="drawer-sec-title">प्रमुख श्रेणियां</h4>
+        <ul class="drawer-menu-links">
+          <li><a href="#" data-category="all" class="drawer-link">🏠 होम पेज</a></li>
+          <li><a href="#" data-category="breaking" class="drawer-link">⚡ बड़ी और ताज़ा खबर</a></li>
+          <li><a href="#" data-category="national" class="drawer-link">🇮🇳 देश (National)</a></li>
+          <li><a href="#" data-category="state" class="drawer-link">🏙️ राज्य व शहर (States)</a></li>
+          <li><a href="#" data-category="politics" class="drawer-link">🗳️ राजनीति (Politics)</a></li>
+          <li><a href="#" data-category="sports" class="drawer-link">🏏 क्रिकेट व खेल (Sports)</a></li>
+          <li><a href="#" data-category="entertainment" class="drawer-link">🎬 मनोरंजन (Bollywood & OTT)</a></li>
+          <li><a href="#" data-category="business" class="drawer-link">💼 बिज़नेस व शेयर बाजार</a></li>
+          <li><a href="#" data-category="tech" class="drawer-link">📱 गैजेट्स व टेक्नोलॉजी</a></li>
+          <li><a href="#" data-category="videos" class="drawer-link">📹 वीडियो बुलेटिन</a></li>
+        </ul>
+      </div>
+
+      <div class="drawer-section">
+        <h4 class="drawer-sec-title">राज्य चुनें</h4>
+        <div class="drawer-state-grid">
+          <button type="button" class="drawer-state-btn" data-state="delhi">दिल्ली</button>
+          <button type="button" class="drawer-state-btn" data-state="up">उत्तर प्रदेश</button>
+          <button type="button" class="drawer-state-btn" data-state="bihar">बिहार</button>
+          <button type="button" class="drawer-state-btn" data-state="mp">मध्य प्रदेश</button>
+          <button type="button" class="drawer-state-btn" data-state="rajasthan">राजस्थान</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Full Article Reader Modal -->
+  <div class="modal-backdrop" id="articleModalBackdrop" hidden>
+    <div class="article-modal" role="dialog" aria-modal="true" aria-labelledby="modalArticleTitle">
+      <div class="modal-header">
+        <div class="modal-meta-left">
+          <span class="modal-category" id="modalCategory">देश</span>
+          <span class="modal-date" id="modalDate">25 अक्टूबर 2026</span>
+        </div>
+        <div class="modal-actions">
+          <button type="button" id="ttsPlayBtn" class="tts-btn" title="खबर सुनें">
+            <span id="ttsIcon">🔊</span>
+            <span id="ttsLabel">खबर सुनें</span>
+          </button>
+          <button type="button" id="modalFontDec" class="font-ctrl-btn" title="फॉन्ट छोटा करें">A-</button>
+          <button type="button" id="modalFontInc" class="font-ctrl-btn" title="फॉन्ट बड़ा करें">A+</button>
+          <button type="button" id="closeArticleModalBtn" class="close-modal-btn" aria-label="बंद करें">✕</button>
+        </div>
+      </div>
+
+      <div class="modal-body-scroll" id="modalScrollBody">
+        <h1 class="modal-title" id="modalArticleTitle">खबर का शीर्षक</h1>
+        
+        <div class="modal-byline">
+          <div class="author-avatar">✍️</div>
+          <div class="author-info">
+            <span class="author-name" id="modalAuthor">विशेष संवाददाता, नई दिल्ली</span>
+            <span class="read-duration" id="modalReadTime">3 मिनट वाचन</span>
+          </div>
+          <div class="modal-share-strip">
+            <button type="button" class="share-icon wa-share" id="modalWaShare" title="WhatsApp">WhatsApp</button>
+            <button type="button" class="share-icon x-share" id="modalXShare" title="X (Twitter)">X</button>
+            <button type="button" class="share-icon copy-share" id="modalCopyShare" title="कॉपी लिंक">Copy</button>
+          </div>
+        </div>
+
+        <figure class="modal-figure">
+          <img id="modalImage" src="" alt="News Image" />
+          <figcaption id="modalCaption" class="modal-caption"></figcaption>
+        </figure>
+
+        <div class="modal-bullets-card" id="modalBulletsWrap" style="display:none;">
+          <h4>मुख्य बिंदु:</h4>
+          <ul id="modalBulletsList"></ul>
+        </div>
+
+        <div class="modal-article-text" id="modalArticleContent">
+          <!-- Populated dynamically -->
+        </div>
+
+        <!-- Comments -->
+        <section class="modal-comments-area">
+          <h3>पाठकों की प्रतिक्रियाएं (टिप्पणियां)</h3>
+          <div class="comment-input-box">
+            <input type="text" id="commenterName" placeholder="आपका नाम..." maxlength="50">
+            <textarea id="commenterText" placeholder="इस खबर पर अपनी राय व्यक्त करें..." rows="3"></textarea>
+            <button type="button" id="submitCommentBtn" class="submit-comment-btn">टिप्पणी पोस्ट करें</button>
+          </div>
+          <div class="comments-list" id="modalCommentsList">
+            <div class="comment-item">
+              <strong>राजेश शर्मा (दिल्ली):</strong>
+              <p>बहुत ही संतुलित और त्वरित रिपोर्टिंग। News5Indiaa को बधाई।</p>
+              <span class="comment-time">15 मिनट पहले</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Live TV Stream Modal -->
+  <div class="modal-backdrop" id="liveTvModalBackdrop" hidden>
+    <div class="livetv-modal" role="dialog" aria-modal="true" aria-labelledby="liveTvModalTitle">
+      <div class="livetv-header">
+        <div class="livetv-title-wrap">
+          <span class="live-dot-red"></span>
+          <h2 id="liveTvModalTitle">News5Indiaa लाइव न्यूज़ रूम</h2>
+          <span class="broadcast-tag">HD BROADCAST</span>
+        </div>
+        <button type="button" id="closeLiveTvBtn" class="close-modal-btn" aria-label="बंद करें">✕</button>
+      </div>
+      <div class="livetv-screen">
+        <div class="tv-stream-container">
+          <img src="assets/studio-live.jpg" alt="News 5 India Live Studio" class="tv-stream-bg" />
+          
+          <div class="tv-watermark">
+            <span class="tv-five">5</span>
+            <span class="tv-channel">NEWS 5 INDIA LIVE</span>
+          </div>
+          <div class="tv-time-code" id="tvTimeCode">19:30:00 IST</div>
+
+          <div class="tv-lower-third">
+            <div class="ticker-flash-label">BREAKING NEWS</div>
+            <div class="ticker-flash-headline">
+              बड़ी बहस: भारत की आर्थिक उड़ान और वैश्विक बाजार में मजबूत स्थिति पर विशेष चर्चा लाइव
+            </div>
+          </div>
+
+          <div class="tv-controls-bar">
+            <button type="button" id="tvMuteToggleBtn" class="tv-ctrl-btn">🔊 म्यूट / अनम्यूट</button>
+            <span class="tv-status">🔴 ऑन एयर (ON AIR)</span>
+            <button type="button" id="tvQualityBtn" class="tv-ctrl-btn">⚙️ 1080p 60fps</button>
+          </div>
+        </div>
+      </div>
+      <div class="livetv-schedule">
+        <h4>आज के प्रमुख शो व प्रसारण:</h4>
+        <div class="schedule-pills">
+          <div class="sched-pill active"><strong>07:00 PM:</strong> प्राइम टाइम डिबेट (रोहित मल्होत्रा)</div>
+          <div class="sched-pill"><strong>08:30 PM:</strong> देश का सवाल (अदिति सेन)</div>
+          <div class="sched-pill"><strong>09:30 PM:</strong> 100 बड़ी खबरें नॉनस्टॉप</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- E-Paper Modal -->
+  <div class="modal-backdrop" id="epaperModalBackdrop" hidden>
+    <div class="epaper-modal" role="dialog" aria-modal="true">
+      <div class="epaper-modal-header">
+        <h3>News5Indiaa डिजिटल ई-पेपर</h3>
+        <button type="button" id="closeEpaperBtn" class="close-modal-btn">✕</button>
+      </div>
+      <div class="epaper-modal-body">
+        <p><strong>दिनांक:</strong> 25 अक्टूबर 2026 | <strong>संस्करण:</strong> दिल्ली-एनसीआर (मुख्य पृष्ठ)</p>
+        <div class="epaper-page-preview">
+          <div class="epaper-paper-sheet">
+            <div class="epaper-masthead">
+              <h2>NEWS 5 INDIAA</h2>
+              <p>दैनिक राष्ट्रीय संस्करण • मूल्य ₹5.00 • वर्ष 12, अंक 298</p>
+            </div>
+            <div class="epaper-columns-mock">
+              <div class="mock-col">
+                <h4>स्वदेशी 6G व AI में भारत का नया वैश्विक कीर्तिमान</h4>
+                <p>नई दिल्ली। भारत ने आधुनिक आर्टिफिशियल इंटेलिजेंस और 6G तकनीक के क्षेत्र में असाधारण सफलता प्राप्त की है...</p>
+              </div>
+              <div class="mock-col">
+                <h4>सेंसेक्स 85,000 के ऐतिहासिक शिखर पर</h4>
+                <p>मुंबई। घरेलू संस्थागत निवेशकों की भारी खरीदारी और मजबूत वैश्विक संकेतों से बाजार में तेजी...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="epaper-download-cta">
+          <button type="button" class="btn-primary-action" onclick="alert('ई-पेपर पीडीएफ डाउनलोड शुरू हो रहा है...')">📥 पूरा ई-पेपर डाउनलोड करें (PDF)</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Instagram Auto-Sync & Bridge Modal -->
+  <div class="modal-backdrop" id="addInstaModalBackdrop" hidden>
+    <div class="article-modal insta-sync-modal" role="dialog" aria-modal="true" aria-labelledby="instaModalTitle">
+      <div class="modal-header">
+        <div class="modal-meta-left">
+          <span class="modal-category insta-badge-gradient">⚡ Instagram Auto-Sync Center</span>
+          <span class="modal-date">@news5indiaa Live Bridge</span>
+        </div>
+        <button type="button" id="closeAddInstaModalBtn" class="close-modal-btn" aria-label="बंद करें">✕</button>
+      </div>
+      <div class="insta-modal-body">
+        <div class="insta-modal-tabs">
+          <button type="button" class="insta-tab-btn active" id="tabAutoSyncBtn">⚡ 100% ऑटो-पायलट (बिना कुछ किए)</button>
+          <button type="button" class="insta-tab-btn" id="tabManualSyncBtn">✍️ कस्टम पोस्ट (मैनुअल)</button>
+        </div>
+
+        <!-- Tab 1: 100% Hands-Free Auto-Pilot Webhook -->
+        <div class="insta-tab-content active" id="tabAutoSyncContent">
+          <div class="auto-sync-status-card">
+            <div class="status-indicator-row">
+              <span class="pulse-indicator-dot"></span>
+              <strong>24x7 Instagram ऑटो-सिंक सक्रिय है!</strong>
+            </div>
+            <p class="status-subtext">अब आपको वेबसाइट पर आकर कुछ भी करने की जरूरत नहीं है। जैसे ही आप अपने Instagram <strong>@news5indiaa</strong> पर कोई Reel या Post शेयर करेंगे, वह <strong>सीधे वेबसाइट पर विज़ुअल स्टोरीज़ में लाइव</strong> हो जाएगी!</p>
+          </div>
+
+          <div class="sync-steps-box">
+            <h4>यह कैसे 100% ऑटोमैटिक काम करता है:</h4>
+            <ol class="sync-steps-list">
+              <li>
+                <strong>1. Instagram पर पोस्ट करें:</strong> अपने फोन से Instagram ऐप पर कोई भी Reel या Video पोस्ट करें।
+              </li>
+              <li>
+                <strong>2. लाइव वेबहुक / ऑटो-सिंक:</strong> आपका पोस्ट ऑटोमैटिकली हमारे 24x7 एक्टिव एंडपॉइंट पर आ जाता है:
+                <div class="webhook-url-box">
+                  <code id="webhookUrlDisplay">http://localhost:3000/api/instagram-webhook</code>
+                  <button type="button" class="btn-copy-code" id="copyWebhookBtn" title="URL कॉपी करें">कॉपी</button>
+                </div>
+              </li>
+              <li>
+                <strong>3. वेबसाइट पर ऑटो-पब्लिश:</strong> वेबसाइट हर 45 सेकंड में बैकग्राउंड में साइलेंटली चेक करके नई स्टोरी सबसे आगे लगा देती है।
+              </li>
+            </ol>
+          </div>
+
+          <div class="auto-test-action-wrap">
+            <button type="button" class="btn-test-auto-post" id="btnTestAutoPost">
+              <span>🧪 अभी टेस्ट करें: इंस्टाग्राम से ऑटो-पोस्ट सिमुलेट करें</span>
+            </button>
+            <span class="test-hint">क्लिक करते ही इंस्टाग्राम से एक नया ताज़ा पोस्ट वेबसाइट पर तुरंत आ जाएगा!</span>
+          </div>
+        </div>
+
+        <!-- Tab 2: Manual Post Form -->
+        <div class="insta-tab-content" id="tabManualSyncContent" style="display:none;">
+          <h3 class="insta-modal-title" id="instaModalTitle">Instagram पोस्ट या Reel को तुरंत जोड़ें</h3>
+          <p class="insta-modal-sub">अगर आप किसी खास Reel या पोस्ट को अभी तुरंत विज़ुअल स्टोरी में सबसे ऊपर दिखाना चाहते हैं, तो उसका लिंक यहां डालें:</p>
+          
+          <form id="addInstaStoryForm" class="insta-sync-form">
+            <div class="form-field">
+              <label for="instaPostUrl">Instagram Reel या Post का लिंक <span class="req-star">*</span></label>
+              <input type="url" id="instaPostUrl" placeholder="https://www.instagram.com/reel/... या /p/..." required autocomplete="off" />
+            </div>
+            
+            <div class="form-field">
+              <label for="instaPostTitle">स्टोरी का शीर्षक / कैप्शन <span class="req-star">*</span></label>
+              <input type="text" id="instaPostTitle" placeholder="जैसे: आज की बड़ी ब्रेकिंग न्यूज़ / स्पेशल ग्राउंड रिपोर्ट..." required autocomplete="off" />
+            </div>
+
+            <div class="form-field">
+              <label for="instaPostImage">फोटो / थंबनेल इमेज लिंक (वैकल्पिक)</label>
+              <input type="url" id="instaPostImage" placeholder="https://... (खाली छोड़ सकते हैं)" autocomplete="off" />
+            </div>
+
+            <div class="form-field">
+              <label for="instaPostCategory">श्रेणी (Category)</label>
+              <select id="instaPostCategory">
+                <option value="📸 Instagram Reel">📸 Instagram Reel</option>
+                <option value="मनोरंजन">मनोरंजन (Bollywood & OTT)</option>
+                <option value="बड़ी खबर">बड़ी खबर (Breaking)</option>
+                <option value="क्रिकेट">क्रिकेट व खेल</option>
+                <option value="ग्राउंड रिपोर्ट">ग्राउंड रिपोर्ट</option>
+              </select>
+            </div>
+
+            <div class="form-buttons-row">
+              <button type="button" class="btn-cancel-modal" id="cancelAddInstaBtn">बंद करें</button>
+              <button type="submit" class="btn-submit-insta" id="submitInstaStoryBtn">🚀 तुरंत वेबसाइट पर लाइव करें</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast-notification" id="toastNotification" role="alert" aria-live="assertive"></div>
+
+  <!-- Footer -->
+  <footer class="portal-footer" id="portalFooter">
+    <div class="footer-top-strip">
+      <div class="container footer-strip-inner">
+        <div class="footer-brand-summary">
+          <img src="assets/logo-badge.jpg" alt="News 5 India" class="footer-logo-img" />
+          <strong>NEWS 5 INDIA Media Network</strong>
+          <span>• हर खबर, आपके साथ</span>
+        </div>
+        <div class="footer-social-links">
+          <a href="#" class="social-circle" title="YouTube">▶</a>
+          <a href="https://www.facebook.com/share/1FQHWjjX8e/" target="_blank" rel="noopener noreferrer" class="social-circle" title="Facebook">f</a>
+          <a href="#" class="social-circle" title="X (Twitter)">𝕏</a>
+          <a href="https://www.instagram.com/news5indiaa?dlrf=MXZ1ZHV0dTZhOW4xdw==" target="_blank" rel="noopener noreferrer" class="social-circle" title="Instagram">📸</a>
+          <a href="#" class="social-circle" title="WhatsApp">💬</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="container footer-main-content">
+      <div class="footer-col">
+        <h5>प्रमुख श्रेणियां</h5>
+        <ul class="footer-links">
+          <li><a href="#" data-category="national">राष्ट्रीय समाचार (देश)</a></li>
+          <li><a href="#" data-category="state">राज्य व लोकल समाचार</a></li>
+          <li><a href="#" data-category="politics">राजनीति व चुनावी हलचल</a></li>
+          <li><a href="#" data-category="sports">क्रिकेट स्कोर व स्पोर्ट्स</a></li>
+          <li><a href="#" data-category="entertainment">बॉलीवुड व वेब सीरीज</a></li>
+          <li><a href="#" data-category="business">बिज़नेस व शेयर मार्केट</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h5>राज्य संस्करण</h5>
+        <ul class="footer-links">
+          <li><a href="#" data-state="up">उत्तर प्रदेश न्यूज़</a></li>
+          <li><a href="#" data-state="bihar">बिहार न्यूज़</a></li>
+          <li><a href="#" data-state="delhi">दिल्ली NCR न्यूज़</a></li>
+          <li><a href="#" data-state="mp">मध्य प्रदेश न्यूज़</a></li>
+          <li><a href="#" data-state="rajasthan">राजस्थान न्यूज़</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h5>डिजिटल सेवाएं</h5>
+        <ul class="footer-links">
+          <li><a href="#" id="footerLiveTvLink">🔴 लाइव टीवी प्रसारण</a></li>
+          <li><a href="#" id="footerEpaperLink">📰 डिजिटल ई-पेपर</a></li>
+          <li><a href="#">🔮 आज का राशिफल</a></li>
+          <li><a href="#">💼 सरकारी नौकरी अपडेट्स</a></li>
+          <li><a href="#">📱 News5Indiaa मोबाइल ऐप</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h5>संपादकीय एवं नीतियां</h5>
+        <ul class="footer-links">
+          <li><a href="#about">हमारे बारे में (About Us)</a></li>
+          <li><a href="#editorial">संपादकीय आचार संहिता</a></li>
+          <li><a href="#factcheck">तथ्य जांच नीति (Fact Check)</a></li>
+          <li><a href="#grievance">शिकायत निवारण अधिकारी</a></li>
+          <li><a href="#privacy">गोपनीयता नीति (Privacy Policy)</a></li>
+          <li><a href="#contact">संपर्क करें (Contact Us)</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom-bar">
+      <div class="container footer-bottom-inner">
+        <p>© 2026 News5Indiaa Digital Media Ltd. सर्वाधिकार सुरक्षित। वेबसाइट पर प्रकाशित सामग्री की प्रतिलिपि बनाना कानूनन अपराध है।</p>
+        <p class="disclaimer-text">अस्वीकरण: News5Indiaa निष्पक्ष और संतुलित पत्रकारिता के सिद्धांतों का पालन करता है। किसी भी समाचार से संबंधित आपत्ति के लिए शिकायत अधिकारी से संपर्क करें।</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="js/news-data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

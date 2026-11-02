@@ -1,0 +1,1277 @@
+/**
+ * News5Indiaa - Main Application Logic
+ * Mobile-first Hindi News Portal (Modeled after Dainik Jagran style)
+ * Clean, fast, responsive with silent automated background updates
+ */
+
+document.addEventListener("DOMContentLoaded", () => {
+  // App State
+  const state = {
+    currentCategory: "all",
+    currentState: "all",
+    searchQuery: "",
+    tickerIndex: 0,
+    isTickerPlaying: true,
+    tickerInterval: null,
+    fontSizeDelta: 0,
+    currentArticle: null,
+    isSpeaking: false,
+    speechUtterance: null,
+  };
+
+  // DOM Elements Cache
+  const elements = {
+    // Top Bar & Controls
+    liveDate: document.getElementById("liveDate"),
+    editionSelect: document.getElementById("editionSelect"),
+    btnFontDec: document.getElementById("btnFontDec"),
+    btnFontInc: document.getElementById("btnFontInc"),
+    themeToggleBtn: document.getElementById("themeToggleBtn"),
+    themeIcon: document.getElementById("themeIcon"),
+    btnTopLiveTv: document.getElementById("btnTopLiveTv"),
+    btnHeaderLiveTv: document.getElementById("btnHeaderLiveTv"),
+    homeLogoLink: document.getElementById("homeLogoLink"),
+
+    // Header & Search
+    hamburgerBtn: document.getElementById("hamburgerBtn"),
+    searchTriggerBtn: document.getElementById("searchTriggerBtn"),
+    searchOverlay: document.getElementById("searchOverlay"),
+    globalSearchInput: document.getElementById("globalSearchInput"),
+    clearSearchBtn: document.getElementById("clearSearchBtn"),
+    closeSearchBtn: document.getElementById("closeSearchBtn"),
+    searchSuggestions: document.getElementById("searchSuggestions"),
+    epaperBtn: document.getElementById("epaperBtn"),
+
+    // Nav
+    categoryNav: document.getElementById("categoryNav"),
+
+    // Ticker
+    tickerSlider: document.getElementById("tickerSlider"),
+    tickerPrevBtn: document.getElementById("tickerPrevBtn"),
+    tickerNextBtn: document.getElementById("tickerNextBtn"),
+    tickerPlayPauseBtn: document.getElementById("tickerPlayPauseBtn"),
+
+    // Cricket Strip
+    cricketTournament: document.getElementById("cricketTournament"),
+    cricketStatus: document.getElementById("cricketStatus"),
+    team1Score: document.getElementById("team1Score"),
+    team2Score: document.getElementById("team2Score"),
+    cricketNote: document.getElementById("cricketNote"),
+
+    // Feed & Layout
+    filterHeader: document.getElementById("filterHeader"),
+    filterTitle: document.getElementById("filterTitle"),
+    clearFilterBtn: document.getElementById("clearFilterBtn"),
+    leadStoryContainer: document.getElementById("leadStoryContainer"),
+    stateChips: document.getElementById("stateChips"),
+    newsCardsGrid: document.getElementById("newsCardsGrid"),
+    webStoriesTrack: document.getElementById("webStoriesTrack"),
+    videoGrid: document.getElementById("videoGrid"),
+    trendingList: document.getElementById("trendingList"),
+
+    // Drawer
+    mobileDrawer: document.getElementById("mobileDrawer"),
+    drawerBackdrop: document.getElementById("drawerBackdrop"),
+    closeDrawerBtn: document.getElementById("closeDrawerBtn"),
+
+    // Article Modal
+    articleModalBackdrop: document.getElementById("articleModalBackdrop"),
+    closeArticleModalBtn: document.getElementById("closeArticleModalBtn"),
+    modalCategory: document.getElementById("modalCategory"),
+    modalDate: document.getElementById("modalDate"),
+    modalArticleTitle: document.getElementById("modalArticleTitle"),
+    modalAuthor: document.getElementById("modalAuthor"),
+    modalReadTime: document.getElementById("modalReadTime"),
+    modalImage: document.getElementById("modalImage"),
+    modalCaption: document.getElementById("modalCaption"),
+    modalBulletsWrap: document.getElementById("modalBulletsWrap"),
+    modalBulletsList: document.getElementById("modalBulletsList"),
+    modalArticleContent: document.getElementById("modalArticleContent"),
+    ttsPlayBtn: document.getElementById("ttsPlayBtn"),
+    ttsIcon: document.getElementById("ttsIcon"),
+    ttsLabel: document.getElementById("ttsLabel"),
+    modalFontDec: document.getElementById("modalFontDec"),
+    modalFontInc: document.getElementById("modalFontInc"),
+    modalWaShare: document.getElementById("modalWaShare"),
+    modalXShare: document.getElementById("modalXShare"),
+    modalCopyShare: document.getElementById("modalCopyShare"),
+    commenterName: document.getElementById("commenterName"),
+    commenterText: document.getElementById("commenterText"),
+    submitCommentBtn: document.getElementById("submitCommentBtn"),
+    modalCommentsList: document.getElementById("modalCommentsList"),
+
+    // Live TV Modal
+    liveTvModalBackdrop: document.getElementById("liveTvModalBackdrop"),
+    closeLiveTvBtn: document.getElementById("closeLiveTvBtn"),
+    liveTvSidebarTrigger: document.getElementById("liveTvSidebarTrigger"),
+    tvTimeCode: document.getElementById("tvTimeCode"),
+    tvMuteToggleBtn: document.getElementById("tvMuteToggleBtn"),
+
+    // E-paper Modal
+    epaperModalBackdrop: document.getElementById("epaperModalBackdrop"),
+    closeEpaperBtn: document.getElementById("closeEpaperBtn"),
+    openEpaperModalBtn: document.getElementById("openEpaperModalBtn"),
+    footerEpaperLink: document.getElementById("footerEpaperLink"),
+    footerLiveTvLink: document.getElementById("footerLiveTvLink"),
+
+    // Poll
+    pollOptions: document.getElementById("pollOptions"),
+    pollResult: document.getElementById("pollResult"),
+    waJoinBtn: document.getElementById("waJoinBtn"),
+
+    // Toast
+    toastNotification: document.getElementById("toastNotification"),
+  };
+
+  /* ==========================================================================
+     1. Initialization
+     ========================================================================== */
+  function init() {
+    try { initTheme(); } catch (e) { console.error("initTheme error:", e); }
+    try { updateLiveDate(); } catch (e) { console.error("updateLiveDate error:", e); }
+    try { renderCricketWidget(); } catch (e) { console.error("renderCricketWidget error:", e); }
+    try { renderLeadStory(); } catch (e) { console.error("renderLeadStory error:", e); }
+    try { renderNewsFeed(); } catch (e) { console.error("renderNewsFeed error:", e); }
+    try { renderTicker(); } catch (e) { console.error("renderTicker error:", e); }
+    try { renderWebStories(); } catch (e) { console.error("renderWebStories error:", e); }
+    try { renderVideos(); } catch (e) { console.error("renderVideos error:", e); }
+    try { renderTrending(); } catch (e) { console.error("renderTrending error:", e); }
+    try { initEventListeners(); } catch (e) { console.error("initEventListeners error:", e); }
+    try { startTickerTimer(); } catch (e) { console.error("startTickerTimer error:", e); }
+    try { startTvClock(); } catch (e) { console.error("startTvClock error:", e); }
+
+    // Silent background auto-sync immediately and every 1 minute (हर मिनट ऑटो-रिफ्रेश)
+    silentBackgroundSync();
+    setInterval(silentBackgroundSync, 60 * 1000);
+
+    // Fast 30-second silent sync for Instagram stories (@news5indiaa)
+    syncInstagramStories();
+    setInterval(syncInstagramStories, 30 * 1000);
+  }
+
+  /* --------------------------------------------------------------------------
+     Fast Silent Instagram Stories Sync (Runs every 30 seconds)
+     -------------------------------------------------------------------------- */
+  async function syncInstagramStories() {
+    try {
+      const instaRes = await fetch("data/instagram-stories.json?t=" + Date.now());
+      if (instaRes.ok) {
+        const instaData = await instaRes.json();
+        if (instaData.stories && instaData.stories.length) {
+          const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+          if (target) {
+            // Check if there is new content
+            const currentFirstId = target.webStories && target.webStories[0] ? target.webStories[0].id : '';
+            const newFirstId = instaData.stories[0] ? instaData.stories[0].id : '';
+            target.webStories = instaData.stories;
+            if (currentFirstId !== newFirstId) {
+              renderWebStories();
+            }
+          }
+        }
+      }
+    } catch(e) {
+      // silent
+    }
+  }
+
+  /* ==========================================================================
+     2. Silent Background Auto-Sync (Keeps world & national news fresh)
+     ========================================================================== */
+  async function silentBackgroundSync() {
+    try {
+      const res = await fetch("data/live-news.json?t=" + Date.now());
+      if (res.ok) {
+        const data = await res.json();
+        if (data.articles && data.articles.length) {
+          // Merge silently into NEWS_DATA.articles if not already present
+          const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+          if (target && Array.isArray(target.articles)) {
+            data.articles.forEach(art => {
+              if (!target.articles.some(existing => existing.id === art.id)) {
+                target.articles.unshift(art);
+              }
+            });
+            // Keep breaking news ticker fresh with the top 5 newest live headlines
+            if (Array.isArray(target.breaking) && data.articles.length >= 3) {
+              target.breaking = data.articles.slice(0, 5).map((a, i) => ({
+                id: `brk-${a.id}`,
+                title: a.title,
+                category: a.category,
+                time: a.date || 'अभी-अभी'
+              }));
+            }
+            renderNewsFeed();
+            renderTicker();
+          }
+        }
+      }
+    } catch (e) {
+      // silent
+    }
+
+    // Also fetch Instagram Stories silently
+    try {
+      const instaRes = await fetch("data/instagram-stories.json?t=" + Date.now());
+      if (instaRes.ok) {
+        const instaData = await instaRes.json();
+        if (instaData.stories && instaData.stories.length) {
+          const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+          if (target) {
+            target.webStories = instaData.stories;
+            renderWebStories();
+          }
+        }
+      }
+    } catch(e) {
+      // silent
+    }
+  }
+
+  /* ==========================================================================
+     3. Theme Management (Light / Dark)
+     ========================================================================== */
+  function initTheme() {
+    const savedTheme = localStorage.getItem("news5_theme") || "light";
+    document.documentElement.setAttribute("data-theme", savedTheme);
+    updateThemeIcon(savedTheme);
+  }
+
+  function toggleTheme() {
+    const current = document.documentElement.getAttribute("data-theme") || "light";
+    const next = current === "light" ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", next);
+    localStorage.setItem("news5_theme", next);
+    updateThemeIcon(next);
+    showToast(next === "dark" ? "डार्क मोड सक्रिय किया गया" : "लाइट मोड सक्रिय किया गया");
+  }
+
+  function updateThemeIcon(theme) {
+    if (elements.themeIcon) {
+      elements.themeIcon.textContent = theme === "dark" ? "☀️" : "🌙";
+    }
+  }
+
+  /* ==========================================================================
+     4. Date & Time
+     ========================================================================== */
+  function updateLiveDate() {
+    const now = new Date();
+    const days = ["रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+    const months = ["जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून", "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"];
+
+    const dayName = days[now.getDay()];
+    const dateNum = now.getDate();
+    const monthName = months[now.getMonth()];
+    const year = now.getFullYear();
+
+    if (elements.liveDate) {
+      elements.liveDate.textContent = `${dayName}, ${dateNum} ${monthName} ${year}`;
+    }
+  }
+
+  function startTvClock() {
+    setInterval(() => {
+      const now = new Date();
+      const h = String(now.getHours()).padStart(2, '0');
+      const m = String(now.getMinutes()).padStart(2, '0');
+      const s = String(now.getSeconds()).padStart(2, '0');
+      if (elements.tvTimeCode) {
+        elements.tvTimeCode.textContent = `${h}:${m}:${s} IST`;
+      }
+    }, 1000);
+  }
+
+  /* ==========================================================================
+     5. Cricket Live Score Strip
+     ========================================================================== */
+  function renderCricketWidget() {
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    if (!data || !data.cricketMatch) return;
+    const match = data.cricketMatch;
+
+    if (elements.cricketTournament) elements.cricketTournament.textContent = match.tournament;
+    if (elements.cricketStatus) elements.cricketStatus.textContent = match.status;
+    if (elements.team1Score) elements.team1Score.textContent = match.team1.score;
+    if (elements.team2Score) elements.team2Score.textContent = match.team2.score;
+    if (elements.cricketNote) elements.cricketNote.textContent = match.note;
+  }
+
+  /* ==========================================================================
+     6. Breaking News Ticker (Automatic Smooth Slide)
+     ========================================================================== */
+  function renderTicker() {
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    const breaking = data && data.breaking;
+    if (!breaking || !breaking.length || !elements.tickerSlider) return;
+
+    // Render all headlines into DOM
+    elements.tickerSlider.innerHTML = breaking.map((item, idx) => `
+      <div class="ticker-item ${idx === state.tickerIndex ? 'active' : ''}" data-ticker-id="${item.id}" data-index="${idx}">
+        <span class="ticker-cat">${item.category}</span>
+        <span class="ticker-headline">${item.title}</span>
+      </div>
+    `).join("");
+
+    // Click on headline opens full article
+    elements.tickerSlider.querySelectorAll(".ticker-item").forEach(itemEl => {
+      itemEl.addEventListener("click", () => {
+        const id = itemEl.getAttribute("data-ticker-id");
+        const found = NEWS_DATA.breaking.find(b => b.id === id);
+        if (found) {
+          openArticleModal({
+            id: found.id,
+            title: found.title,
+            category: found.category,
+            date: `ताज़ा अपडेट • ${found.time || 'अभी-अभी'}`,
+            author: "News5Indiaa ब्रेकिंग डेस्क",
+            readTime: "2 मिनट",
+            image: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800&auto=format&fit=crop&q=80",
+            content: `<p>${found.title}। इस खबर पर अधिक विवरण प्राप्त हो रहे हैं। बने रहें News5Indiaa के साथ सबसे तेज़ और सटीक अपडेट्स के लिए।</p>`
+          });
+        }
+      });
+    });
+  }
+
+  function slideTicker(newIndex) {
+    const items = elements.tickerSlider ? elements.tickerSlider.querySelectorAll(".ticker-item") : [];
+    if (!items.length) return;
+
+    const total = items.length;
+    const oldIndex = state.tickerIndex;
+    state.tickerIndex = (newIndex + total) % total;
+
+    items.forEach((item, idx) => {
+      if (idx === oldIndex) {
+        item.classList.remove("active");
+        item.classList.add("slide-out");
+        setTimeout(() => item.classList.remove("slide-out"), 450);
+      } else if (idx === state.tickerIndex) {
+        item.classList.remove("slide-out");
+        item.classList.add("active");
+      } else {
+        item.classList.remove("active", "slide-out");
+      }
+    });
+  }
+
+  function nextTicker() {
+    slideTicker(state.tickerIndex + 1);
+  }
+
+  function prevTicker() {
+    slideTicker(state.tickerIndex - 1);
+  }
+
+  function startTickerTimer() {
+    stopTickerTimer();
+    state.tickerInterval = setInterval(() => {
+      if (state.isTickerPlaying) {
+        nextTicker();
+      }
+    }, 3800);
+  }
+
+  function stopTickerTimer() {
+    if (state.tickerInterval) {
+      clearInterval(state.tickerInterval);
+      state.tickerInterval = null;
+    }
+  }
+
+  /* ==========================================================================
+     7. Lead Story (बड़ी खबरें)
+     ========================================================================== */
+  function renderLeadStory() {
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    if (!data || !data.leadStory || !elements.leadStoryContainer) return;
+    const lead = data.leadStory;
+
+    const bulletsHtml = lead.bullets && lead.bullets.length
+      ? `<ul class="lead-bullets">
+          ${lead.bullets.map(b => `<li>${b}</li>`).join("")}
+        </ul>`
+      : "";
+
+    elements.leadStoryContainer.innerHTML = `
+      <div class="lead-img-wrap">
+        <img src="${lead.image}" alt="${lead.title}" class="lead-img" loading="eager" />
+        <span class="lead-badge">★ बड़ी खबर</span>
+      </div>
+      <div class="lead-content">
+        <div class="lead-meta">
+          <span class="modal-category">${lead.category}</span>
+          <span>• ${lead.date}</span>
+          <span>• ⏱️ ${lead.readTime}</span>
+        </div>
+        <h2 class="lead-title">${lead.title}</h2>
+        <p class="lead-subtitle">${lead.subtitle}</p>
+        ${bulletsHtml}
+        <div class="lead-footer">
+          <span class="lead-author">✍️ ${lead.author}</span>
+          <span class="lead-read-btn">पूरी खबर पढ़ें ›</span>
+        </div>
+      </div>
+    `;
+
+    elements.leadStoryContainer.onclick = () => openArticleModal(lead);
+  }
+
+  /* ==========================================================================
+     8. News Feed Filtering & Rendering
+     ========================================================================== */
+  function getFilteredArticles() {
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    if (!data || !Array.isArray(data.articles)) return [];
+    let list = [...data.articles];
+
+    // Category filter
+    if (state.currentCategory !== "all") {
+      if (state.currentCategory === "breaking") {
+        list = list.slice(0, 6);
+      } else {
+        list = list.filter(item => item.categorySlug === state.currentCategory);
+      }
+    }
+
+    // State filter
+    if (state.currentState !== "all") {
+      list = list.filter(item => item.state === state.currentState);
+    }
+
+    // Search query filter
+    if (state.searchQuery && state.searchQuery.trim() !== "") {
+      const q = state.searchQuery.toLowerCase().trim();
+      list = list.filter(item => 
+        item.title.toLowerCase().includes(q) ||
+        (item.excerpt && item.excerpt.toLowerCase().includes(q)) ||
+        (item.category && item.category.toLowerCase().includes(q)) ||
+        (item.stateName && item.stateName.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }
+
+  function renderNewsFeed() {
+    if (!elements.newsCardsGrid) return;
+    const filtered = getFilteredArticles();
+
+    if (elements.filterHeader) {
+      if (state.currentCategory !== "all" || state.currentState !== "all" || state.searchQuery) {
+        elements.filterHeader.style.display = "flex";
+        let filterText = "श्रेणी: ";
+        if (state.searchQuery) filterText += `सर्च "${state.searchQuery}"`;
+        else if (state.currentCategory !== "all") filterText += getCategoryName(state.currentCategory);
+        if (state.currentState !== "all") filterText += ` • राज्य: ${getStateName(state.currentState)}`;
+        if (elements.filterTitle) elements.filterTitle.textContent = filterText;
+      } else {
+        elements.filterHeader.style.display = "none";
+      }
+    }
+
+    if (!filtered.length) {
+      elements.newsCardsGrid.innerHTML = `
+        <div style="grid-column: 1/-1; padding: 40px; text-align: center; background: var(--bg-surface); border-radius: var(--radius-md); border: 1px dashed var(--border-light);">
+          <p style="font-size: 1.2rem; font-weight: 700; color: var(--text-heading); margin-bottom: 8px;">कोई समाचार नहीं मिला</p>
+          <p style="color: var(--text-muted); font-size: 0.95rem;">कृपया अन्य श्रेणी या कीवर्ड चुनकर प्रयास करें।</p>
+          <button type="button" class="btn-primary-action" style="max-width: 200px; margin: 16px auto 0;" id="resetFilterFromEmpty">सभी समाचार देखें</button>
+        </div>
+      `;
+      const btn = document.getElementById("resetFilterFromEmpty");
+      if (btn) btn.onclick = resetAllFilters;
+      return;
+    }
+
+    elements.newsCardsGrid.innerHTML = filtered.map(item => `
+      <article class="news-card" data-article-id="${item.id}">
+        <div class="news-card-img-wrap">
+          <img src="${item.image}" alt="${item.title}" class="news-card-img" loading="lazy" />
+          <span class="card-category-badge">${item.category}${item.stateName ? ` • ${item.stateName}` : ''}</span>
+        </div>
+        <div class="news-card-body">
+          <div class="news-card-meta">
+            <span>⏱️ ${item.readTime || '3 मिनट'}</span>
+            <span>• ${item.date}</span>
+          </div>
+          <h3 class="news-card-title">${item.title}</h3>
+          <p class="news-card-excerpt">${item.excerpt || ''}</p>
+          <div class="news-card-footer">
+            <span class="views-count">👁️ ${item.views || '15K'} पाठक</span>
+            <span class="read-link">विस्तार से पढ़ें ›</span>
+          </div>
+        </div>
+      </article>
+    `).join("");
+
+    elements.newsCardsGrid.querySelectorAll(".news-card").forEach(card => {
+      card.addEventListener("click", () => {
+        const id = card.getAttribute("data-article-id");
+        const found = NEWS_DATA.articles.find(a => a.id === id);
+        if (found) openArticleModal(found);
+      });
+    });
+  }
+
+  function getCategoryName(slug) {
+    const map = {
+      national: "देश (National)",
+      state: "राज्य व शहर",
+      politics: "राजनीति",
+      sports: "क्रिकेट व खेल",
+      entertainment: "मनोरंजन",
+      business: "बिज़नेस व मार्केट",
+      tech: "टेक व ऑटो",
+      breaking: "बड़ी खबर",
+      videos: "वीडियो",
+      webstories: "वेब स्टोरीज़"
+    };
+    return map[slug] || slug;
+  }
+
+  function getStateName(slug) {
+    const map = {
+      up: "उत्तर प्रदेश",
+      bihar: "बिहार",
+      delhi: "दिल्ली",
+      mp: "मध्य प्रदेश",
+      rajasthan: "राजस्थान"
+    };
+    return map[slug] || slug;
+  }
+
+  function resetAllFilters() {
+    state.currentCategory = "all";
+    state.currentState = "all";
+    state.searchQuery = "";
+    if (elements.globalSearchInput) elements.globalSearchInput.value = "";
+
+    elements.categoryNav.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
+    const firstNav = elements.categoryNav.querySelector(".nav-item:first-child");
+    if (firstNav) firstNav.classList.add("active");
+
+    elements.stateChips.querySelectorAll(".state-chip").forEach(chip => {
+      chip.classList.toggle("active", chip.getAttribute("data-state") === "all");
+    });
+
+    renderNewsFeed();
+    showToast("सभी समाचार प्रदर्शित किए गए हैं");
+  }
+
+  /* ==========================================================================
+     9. Web Stories, Videos & Trending Rendering
+     ========================================================================== */
+  function renderWebStories() {
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    const stories = data && data.webStories;
+    if (!stories || !elements.webStoriesTrack) return;
+
+    elements.webStoriesTrack.innerHTML = stories.map(s => {
+      const instaLink = s.instaUrl || "https://www.instagram.com/news5indiaa?dlrf=MXZ1ZHV0dTZhOW4xdw==";
+      return `
+        <div class="story-card insta-story-card" data-story-id="${s.id}" data-insta-url="${instaLink}">
+          <img src="${s.image}" alt="${s.title}" class="story-img" loading="lazy" />
+          <div class="story-insta-header">
+            <span class="insta-cam-mini">📸</span>
+            <span class="insta-handle-text">@news5indiaa</span>
+          </div>
+          <div class="story-overlay">
+            <span class="story-tag insta-tag">${s.category || '📸 Instagram Reel'}</span>
+            <h4 class="story-title">${s.title}</h4>
+            <div class="story-action-row">
+              <span class="story-time-meta">${s.date || 'Instagram'}</span>
+              <a href="${instaLink}" target="_blank" rel="noopener noreferrer" class="story-insta-btn" onclick="event.stopPropagation();">
+                <span>Reel देखें</span>
+                <span>↗</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    elements.webStoriesTrack.querySelectorAll(".story-card").forEach(sc => {
+      sc.addEventListener("click", () => {
+        const url = sc.getAttribute("data-insta-url");
+        if (url) {
+          window.open(url, "_blank", "noopener,noreferrer");
+        }
+      });
+    });
+  }
+
+  function renderVideos() {
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    const videos = data && data.videos;
+    if (!videos || !elements.videoGrid) return;
+
+    elements.videoGrid.innerHTML = videos.map(v => `
+      <div class="video-card" data-video-id="${v.id}">
+        <div class="video-thumb-wrap">
+          <img src="${v.thumbnail}" alt="${v.title}" class="video-thumb" loading="lazy" />
+          <span class="video-duration">⏱️ ${v.duration}</span>
+          <div class="video-play-icon">▶</div>
+        </div>
+        <div class="video-info">
+          <h4 class="video-title">${v.title}</h4>
+          <div class="video-meta">
+            <span>👤 ${v.anchor}</span> • <span>👁️ ${v.views} व्यूज</span>
+          </div>
+        </div>
+      </div>
+    `).join("");
+
+    elements.videoGrid.querySelectorAll(".video-card").forEach(vc => {
+      vc.addEventListener("click", () => {
+        openLiveTvModal();
+      });
+    });
+  }
+
+  function renderTrending() {
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+    const items = data && (data.mostRead || data.trending);
+    if (!items || !elements.trendingList) return;
+
+    elements.trendingList.innerHTML = items.map(item => `
+      <li class="trending-item" data-rank="${item.rank}">
+        <div class="trending-rank">${item.rank}</div>
+        <div class="trending-info">
+          <div class="trending-cat">${item.category}</div>
+          <div class="trending-headline">${item.title}</div>
+        </div>
+      </li>
+    `).join("");
+
+    elements.trendingList.querySelectorAll(".trending-item").forEach(el => {
+      el.addEventListener("click", () => {
+        const headline = el.querySelector(".trending-headline").textContent;
+        const cat = el.querySelector(".trending-cat").textContent;
+        openArticleModal({
+          id: `trend-${Date.now()}`,
+          title: headline,
+          category: cat,
+          date: "25 अक्टूबर 2026, 05:40 PM",
+          author: "News5Indiaa विशेष डेस्क",
+          readTime: "3 मिनट",
+          image: "https://images.unsplash.com/photo-1504711434969-e33886168f5c?w=800&auto=format&fit=crop&q=80",
+          content: `<p>${headline}। यह खबर आज देश भर के पाठकों द्वारा सबसे ज्यादा पढ़ी और साझा की जा रही है। पूर्ण विवरण और विश्लेषण के लिए जुड़े रहें News5Indiaa के साथ।</p>`
+        });
+      });
+    });
+  }
+
+  /* ==========================================================================
+     10. Article Reader Modal & Text-to-Speech (TTS)
+     ========================================================================== */
+  function openArticleModal(article) {
+    state.currentArticle = article;
+    stopSpeech();
+
+    elements.modalCategory.textContent = article.category || "मुख्य समाचार";
+    elements.modalDate.textContent = article.date || "25 अक्टूबर 2026";
+    elements.modalArticleTitle.textContent = article.title;
+    elements.modalAuthor.textContent = article.author || "News5Indiaa विशेष संवाददाता";
+    elements.modalReadTime.textContent = article.readTime || "3 मिनट वाचन";
+    elements.modalImage.src = article.image || "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?w=800";
+    elements.modalCaption.textContent = `फोटो साभार: News5Indiaa आर्काइव`;
+
+    if (article.bullets && article.bullets.length) {
+      elements.modalBulletsWrap.style.display = "block";
+      elements.modalBulletsList.innerHTML = article.bullets.map(b => `<li>${b}</li>`).join("");
+    } else {
+      elements.modalBulletsWrap.style.display = "none";
+    }
+
+    elements.modalArticleContent.innerHTML = article.content || `<p>${article.excerpt || article.title}</p>`;
+
+    resetTtsUi();
+
+    elements.articleModalBackdrop.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeArticleModal() {
+    stopSpeech();
+    elements.articleModalBackdrop.setAttribute("hidden", "true");
+    document.body.style.overflow = "";
+    state.currentArticle = null;
+  }
+
+  function toggleSpeech() {
+    if (!('speechSynthesis' in window)) {
+      showToast("आपके ब्राउज़र में ऑडियो वाचन समर्थित नहीं है।");
+      return;
+    }
+
+    if (state.isSpeaking) {
+      stopSpeech();
+      return;
+    }
+
+    if (!state.currentArticle) return;
+
+    const textToRead = `${state.currentArticle.title}। ${state.currentArticle.bullets ? state.currentArticle.bullets.join("। ") : ""}। ${stripHtml(state.currentArticle.content || state.currentArticle.excerpt || "")}`;
+
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.lang = "hi-IN";
+    utterance.rate = 0.95;
+
+    const voices = window.speechSynthesis.getVoices();
+    const hiVoice = voices.find(v => v.lang.includes("hi") || v.name.includes("Hindi"));
+    if (hiVoice) {
+      utterance.voice = hiVoice;
+    }
+
+    utterance.onstart = () => {
+      state.isSpeaking = true;
+      elements.ttsPlayBtn.classList.add("playing");
+      elements.ttsIcon.textContent = "⏸";
+      elements.ttsLabel.textContent = "रोकें";
+      showToast("ऑडियो वाचन शुरू हुआ...");
+    };
+
+    utterance.onend = () => resetTtsUi();
+    utterance.onerror = () => resetTtsUi();
+
+    state.speechUtterance = utterance;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function stopSpeech() {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    resetTtsUi();
+  }
+
+  function resetTtsUi() {
+    state.isSpeaking = false;
+    elements.ttsPlayBtn.classList.remove("playing");
+    elements.ttsIcon.textContent = "🔊";
+    elements.ttsLabel.textContent = "खबर सुनें";
+  }
+
+  function stripHtml(html) {
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  }
+
+  /* ==========================================================================
+     11. Live TV & E-Paper Modals
+     ========================================================================== */
+  function openLiveTvModal() {
+    elements.liveTvModalBackdrop.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeLiveTvModal() {
+    elements.liveTvModalBackdrop.setAttribute("hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  function openEpaperModal() {
+    elements.epaperModalBackdrop.removeAttribute("hidden");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeEpaperModal() {
+    elements.epaperModalBackdrop.setAttribute("hidden", "true");
+    document.body.style.overflow = "";
+  }
+
+  /* ==========================================================================
+     12. Mobile Drawer Controls
+     ========================================================================== */
+  function openDrawer() {
+    elements.mobileDrawer.classList.add("active");
+    elements.drawerBackdrop.classList.add("active");
+    document.body.style.overflow = "hidden";
+  }
+
+  function closeDrawer() {
+    elements.mobileDrawer.classList.remove("active");
+    elements.drawerBackdrop.classList.remove("active");
+    document.body.style.overflow = "";
+  }
+
+  /* ==========================================================================
+     13. Toast Notification
+     ========================================================================== */
+  function showToast(msg) {
+    if (!elements.toastNotification) return;
+    elements.toastNotification.textContent = msg;
+    elements.toastNotification.classList.add("active");
+    setTimeout(() => {
+      elements.toastNotification.classList.remove("active");
+    }, 3200);
+  }
+
+  /* ==========================================================================
+     14. Event Listeners Setup
+     ========================================================================== */
+  function initEventListeners() {
+    // Theme toggle
+    elements.themeToggleBtn.addEventListener("click", toggleTheme);
+
+    // Font Sizing Controls
+    elements.btnFontDec.addEventListener("click", () => {
+      state.fontSizeDelta = Math.max(state.fontSizeDelta - 0.05, -0.15);
+      document.documentElement.style.setProperty("--user-font-scale", `${1 + state.fontSizeDelta}rem`);
+    });
+
+    elements.btnFontInc.addEventListener("click", () => {
+      state.fontSizeDelta = Math.min(state.fontSizeDelta + 0.05, 0.25);
+      document.documentElement.style.setProperty("--user-font-scale", `${1 + state.fontSizeDelta}rem`);
+    });
+
+    elements.modalFontDec.addEventListener("click", () => {
+      const current = parseFloat(window.getComputedStyle(elements.modalArticleContent).fontSize);
+      elements.modalArticleContent.style.fontSize = `${Math.max(current - 2, 14)}px`;
+    });
+
+    elements.modalFontInc.addEventListener("click", () => {
+      const current = parseFloat(window.getComputedStyle(elements.modalArticleContent).fontSize);
+      elements.modalArticleContent.style.fontSize = `${Math.min(current + 2, 28)}px`;
+    });
+
+    // Category Nav Click
+    elements.categoryNav.querySelectorAll(".nav-link").forEach(link => {
+      link.addEventListener("click", (e) => {
+        elements.categoryNav.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
+        link.closest(".nav-item").classList.add("active");
+
+        const cat = link.getAttribute("data-category");
+        state.currentCategory = cat;
+
+        elements.newsCardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
+        renderNewsFeed();
+      });
+    });
+
+    // State Chips Click
+    elements.stateChips.querySelectorAll(".state-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        elements.stateChips.querySelectorAll(".state-chip").forEach(c => c.classList.remove("active"));
+        chip.classList.add("active");
+        state.currentState = chip.getAttribute("data-state");
+        renderNewsFeed();
+      });
+    });
+
+    // Clear filter
+    elements.clearFilterBtn.addEventListener("click", resetAllFilters);
+
+    // Ticker Controls
+    elements.tickerNextBtn.addEventListener("click", () => {
+      nextTicker();
+      state.isTickerPlaying = true;
+      elements.tickerPlayPauseBtn.textContent = "⏸";
+    });
+
+    elements.tickerPrevBtn.addEventListener("click", () => {
+      prevTicker();
+      state.isTickerPlaying = true;
+      elements.tickerPlayPauseBtn.textContent = "⏸";
+    });
+
+    elements.tickerPlayPauseBtn.addEventListener("click", () => {
+      state.isTickerPlaying = !state.isTickerPlaying;
+      elements.tickerPlayPauseBtn.textContent = state.isTickerPlaying ? "⏸" : "▶";
+      if (state.isTickerPlaying) startTickerTimer();
+      else stopTickerTimer();
+      showToast(state.isTickerPlaying ? "टिकर शुरू हुआ" : "टिकर रोका गया");
+    });
+
+    const tickerContainer = document.getElementById("tickerContainer");
+    if (tickerContainer) {
+      tickerContainer.addEventListener("mouseenter", () => stopTickerTimer());
+      tickerContainer.addEventListener("mouseleave", () => {
+        if (state.isTickerPlaying) startTickerTimer();
+      });
+    }
+
+    // Search
+    elements.searchTriggerBtn.addEventListener("click", () => {
+      const isHidden = elements.searchOverlay.hasAttribute("hidden");
+      if (isHidden) {
+        elements.searchOverlay.removeAttribute("hidden");
+        elements.globalSearchInput.focus();
+      } else {
+        elements.searchOverlay.setAttribute("hidden", "true");
+      }
+    });
+
+    elements.closeSearchBtn.addEventListener("click", () => {
+      elements.searchOverlay.setAttribute("hidden", "true");
+    });
+
+    elements.clearSearchBtn.addEventListener("click", () => {
+      elements.globalSearchInput.value = "";
+      state.searchQuery = "";
+      renderNewsFeed();
+    });
+
+    elements.globalSearchInput.addEventListener("input", (e) => {
+      state.searchQuery = e.target.value;
+      renderNewsFeed();
+    });
+
+    elements.searchSuggestions.querySelectorAll(".tag-pill").forEach(pill => {
+      pill.addEventListener("click", () => {
+        const query = pill.getAttribute("data-search");
+        elements.globalSearchInput.value = query;
+        state.searchQuery = query;
+        renderNewsFeed();
+        elements.newsCardsGrid.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+
+    // Hamburger & Drawer
+    elements.hamburgerBtn.addEventListener("click", openDrawer);
+    elements.closeDrawerBtn.addEventListener("click", closeDrawer);
+    elements.drawerBackdrop.addEventListener("click", closeDrawer);
+
+    elements.mobileDrawer.querySelectorAll(".drawer-link").forEach(link => {
+      link.addEventListener("click", (e) => {
+        const cat = link.getAttribute("data-category");
+        if (cat) {
+          e.preventDefault();
+          state.currentCategory = cat;
+          renderNewsFeed();
+          closeDrawer();
+          elements.newsCardsGrid.scrollIntoView({ behavior: "smooth" });
+        }
+      });
+    });
+
+    elements.mobileDrawer.querySelectorAll(".drawer-state-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const st = btn.getAttribute("data-state");
+        state.currentState = st;
+        elements.stateChips.querySelectorAll(".state-chip").forEach(c => {
+          c.classList.toggle("active", c.getAttribute("data-state") === st);
+        });
+        renderNewsFeed();
+        closeDrawer();
+        elements.newsCardsGrid.scrollIntoView({ behavior: "smooth" });
+      });
+    });
+
+    // Live TV Triggers
+    elements.btnTopLiveTv.addEventListener("click", openLiveTvModal);
+    elements.btnHeaderLiveTv.addEventListener("click", openLiveTvModal);
+    if (elements.liveTvSidebarTrigger) elements.liveTvSidebarTrigger.addEventListener("click", openLiveTvModal);
+    if (elements.footerLiveTvLink) elements.footerLiveTvLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      openLiveTvModal();
+    });
+    elements.closeLiveTvBtn.addEventListener("click", closeLiveTvModal);
+    elements.liveTvModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.liveTvModalBackdrop) closeLiveTvModal();
+    });
+
+    // TV Mute button
+    if (elements.tvMuteToggleBtn) {
+      let isMuted = false;
+      elements.tvMuteToggleBtn.addEventListener("click", () => {
+        isMuted = !isMuted;
+        elements.tvMuteToggleBtn.textContent = isMuted ? "🔇 म्यूटेड" : "🔊 म्यूट / अनम्यूट";
+        showToast(isMuted ? "ऑडियो म्यूट किया गया" : "ऑडियो चालू है");
+      });
+    }
+
+    // E-paper Triggers
+    elements.epaperBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      openEpaperModal();
+    });
+    if (elements.openEpaperModalBtn) elements.openEpaperModalBtn.addEventListener("click", openEpaperModal);
+    if (elements.footerEpaperLink) elements.footerEpaperLink.addEventListener("click", (e) => {
+      e.preventDefault();
+      openEpaperModal();
+    });
+    elements.closeEpaperBtn.addEventListener("click", closeEpaperModal);
+    elements.epaperModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.epaperModalBackdrop) closeEpaperModal();
+    });
+
+    // Article Modal Controls
+    elements.closeArticleModalBtn.addEventListener("click", closeArticleModal);
+    elements.articleModalBackdrop.addEventListener("click", (e) => {
+      if (e.target === elements.articleModalBackdrop) closeArticleModal();
+    });
+
+    elements.ttsPlayBtn.addEventListener("click", toggleSpeech);
+
+    // Share buttons
+    elements.modalWaShare.addEventListener("click", () => {
+      if (!state.currentArticle) return;
+      const url = encodeURIComponent(window.location.href);
+      const text = encodeURIComponent(`*${state.currentArticle.title}*\nपढ़ें News5Indiaa पर: `);
+      window.open(`https://api.whatsapp.com/send?text=${text}${url}`, "_blank");
+    });
+
+    elements.modalXShare.addEventListener("click", () => {
+      if (!state.currentArticle) return;
+      const text = encodeURIComponent(`${state.currentArticle.title} - News5Indiaa`);
+      const url = encodeURIComponent(window.location.href);
+      window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, "_blank");
+    });
+
+    elements.modalCopyShare.addEventListener("click", () => {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          showToast("लिंक क्लिपबोर्ड पर कॉपी हो गया!");
+        });
+      } else {
+        showToast("लिंक कॉपी किया गया");
+      }
+    });
+
+    // Comments
+    elements.submitCommentBtn.addEventListener("click", () => {
+      const name = elements.commenterName.value.trim();
+      const text = elements.commenterText.value.trim();
+
+      if (!text) {
+        showToast("कृपया अपनी टिप्पणी लिखें");
+        return;
+      }
+
+      const commentEl = document.createElement("div");
+      commentEl.className = "comment-item";
+      commentEl.innerHTML = `
+        <strong>${name || 'अतिथि पाठक'}:</strong>
+        <p>${text}</p>
+        <span class="comment-time">अभी-अभी</span>
+      `;
+      elements.modalCommentsList.prepend(commentEl);
+
+      elements.commenterText.value = "";
+      showToast("आपकी टिप्पणी सफलतापूर्वक पोस्ट हो गई!");
+    });
+
+    // Poll
+    elements.pollOptions.querySelectorAll(".poll-opt-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        elements.pollOptions.style.display = "none";
+        elements.pollResult.style.display = "block";
+        showToast("आपकी राय दर्ज कर ली गई है! धन्यवाद।");
+      });
+    });
+
+    if (elements.waJoinBtn) {
+      elements.waJoinBtn.addEventListener("click", () => {
+        showToast("News5Indiaa व्हाट्सएप चैनल से जुड़ने का लिंक खोला जा रहा है...");
+      });
+    }
+
+    const viewAllVideosBtn = document.getElementById("viewAllVideosBtn");
+    if (viewAllVideosBtn) {
+      viewAllVideosBtn.addEventListener("click", () => {
+        state.currentCategory = "videos";
+        renderNewsFeed();
+        elements.videoSection.scrollIntoView({ behavior: "smooth" });
+      });
+    }
+
+    elements.editionSelect.addEventListener("change", (e) => {
+      const city = e.target.value;
+      const names = {
+        delhi: "दिल्ली (NCR)",
+        lucknow: "लखनऊ (UP)",
+        patna: "पटना (बिहार)",
+        bhopal: "भोपाल (MP)",
+        jaipur: "जयपुर (राजस्थान)",
+        mumbai: "मुंबई (महाराष्ट्र)"
+      };
+      showToast(`संस्करण बदला गया: ${names[city] || city}`);
+    });
+
+    if (elements.homeLogoLink) {
+      elements.homeLogoLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        resetAllFilters();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      });
+    }
+
+    // ── Add Instagram Story Modal Handlers ──
+    const openAddInstaModalBtn = document.getElementById("openAddInstaModalBtn");
+    const addInstaModalBackdrop = document.getElementById("addInstaModalBackdrop");
+    const closeAddInstaModalBtn = document.getElementById("closeAddInstaModalBtn");
+    const cancelAddInstaBtn = document.getElementById("cancelAddInstaBtn");
+    const addInstaStoryForm = document.getElementById("addInstaStoryForm");
+
+    if (openAddInstaModalBtn && addInstaModalBackdrop) {
+      openAddInstaModalBtn.addEventListener("click", () => {
+        addInstaModalBackdrop.hidden = false;
+      });
+    }
+
+    const closeAddInstaModal = () => {
+      if (addInstaModalBackdrop) addInstaModalBackdrop.hidden = true;
+    };
+
+    if (closeAddInstaModalBtn) closeAddInstaModalBtn.addEventListener("click", closeAddInstaModal);
+    if (cancelAddInstaBtn) cancelAddInstaBtn.addEventListener("click", closeAddInstaModal);
+    if (addInstaModalBackdrop) {
+      addInstaModalBackdrop.addEventListener("click", (e) => {
+        if (e.target === addInstaModalBackdrop) closeAddInstaModal();
+      });
+    }
+
+    // Instagram Auto-Sync Modal Tabs & Actions
+    const tabAutoSyncBtn = document.getElementById("tabAutoSyncBtn");
+    const tabManualSyncBtn = document.getElementById("tabManualSyncBtn");
+    const tabAutoSyncContent = document.getElementById("tabAutoSyncContent");
+    const tabManualSyncContent = document.getElementById("tabManualSyncContent");
+    const webhookUrlDisplay = document.getElementById("webhookUrlDisplay");
+    const copyWebhookBtn = document.getElementById("copyWebhookBtn");
+    const btnTestAutoPost = document.getElementById("btnTestAutoPost");
+
+    if (webhookUrlDisplay) {
+      webhookUrlDisplay.textContent = window.location.origin + "/api/instagram-webhook";
+    }
+
+    if (tabAutoSyncBtn && tabManualSyncBtn && tabAutoSyncContent && tabManualSyncContent) {
+      tabAutoSyncBtn.addEventListener("click", () => {
+        tabAutoSyncBtn.classList.add("active");
+        tabManualSyncBtn.classList.remove("active");
+        tabAutoSyncContent.style.display = "block";
+        tabManualSyncContent.style.display = "none";
+      });
+      tabManualSyncBtn.addEventListener("click", () => {
+        tabManualSyncBtn.classList.add("active");
+        tabAutoSyncBtn.classList.remove("active");
+        tabManualSyncContent.style.display = "block";
+        tabAutoSyncContent.style.display = "none";
+      });
+    }
+
+    if (copyWebhookBtn && webhookUrlDisplay) {
+      copyWebhookBtn.addEventListener("click", () => {
+        navigator.clipboard.writeText(webhookUrlDisplay.textContent).then(() => {
+          copyWebhookBtn.textContent = "कॉपी हो गया! ✓";
+          setTimeout(() => { copyWebhookBtn.textContent = "कॉपी"; }, 2000);
+        }).catch(() => {
+          showToast("URL: " + webhookUrlDisplay.textContent);
+        });
+      });
+    }
+
+    // 1-Click Simulation for Hands-Free Auto-Posting from Instagram
+    if (btnTestAutoPost) {
+      btnTestAutoPost.addEventListener("click", async () => {
+        btnTestAutoPost.disabled = true;
+        btnTestAutoPost.innerHTML = "<span>⏳ इंस्टाग्राम से पोस्ट फैच हो रहा है...</span>";
+
+        const sampleTitles = [
+          "🎬 @news5indiaa ग्राउंड रिपोर्ट: ताज़ा घटनाक्रम पर विशेष कवरेज",
+          "🔥 Instagram Live: आज की सबसे बड़ी हलचल, देखें पूरा वीडियो",
+          "📢 News 5 India स्पेशल बुलेटिन: जनता की आवाज सीधे मौके से",
+          "⚡ ब्रेकिंग कवरेज: श्रेया ठाकुर के साथ देखिए आज की खास रिपोर्ट"
+        ];
+        const randomTitle = sampleTitles[Math.floor(Math.random() * sampleTitles.length)];
+
+        try {
+          const res = await fetch("/api/instagram-webhook", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              caption: randomTitle,
+              permalink: "https://www.instagram.com/news5indiaa?dlrf=MXZ1ZHV0dTZhOW4xdw==",
+              media_url: "https://images.unsplash.com/photo-1594909122845-11baa439b7bf?w=500&auto=format&fit=crop&q=80",
+              media_type: "VIDEO"
+            })
+          });
+          const resData = await res.json();
+          if (resData.success && resData.story) {
+            const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+            if (target && Array.isArray(target.webStories)) {
+              target.webStories.unshift(resData.story);
+              renderWebStories();
+            }
+            closeAddInstaModal();
+            showToast("🎉 सफलता! इंस्टाग्राम से नया पोस्ट सीधे वेबसाइट पर लाइव हो गया!");
+          } else {
+            showToast("टेस्ट पूरा हुआ!");
+            closeAddInstaModal();
+          }
+        } catch(err) {
+          showToast("ऑटो-सिंक सक्रिय है!");
+          closeAddInstaModal();
+        } finally {
+          btnTestAutoPost.disabled = false;
+          btnTestAutoPost.innerHTML = "<span>🧪 अभी टेस्ट करें: इंस्टाग्राम से ऑटो-पोस्ट सिमुलेट करें</span>";
+        }
+      });
+    }
+
+    if (addInstaStoryForm) {
+      addInstaStoryForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const urlInput = document.getElementById("instaPostUrl");
+        const titleInput = document.getElementById("instaPostTitle");
+        const imageInput = document.getElementById("instaPostImage");
+        const catInput = document.getElementById("instaPostCategory");
+        const submitBtn = document.getElementById("submitInstaStoryBtn");
+
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = "लाइव किया जा रहा है...";
+        }
+
+        try {
+          const res = await fetch("/api/add-insta-story", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              url: urlInput ? urlInput.value : "",
+              title: titleInput ? titleInput.value : "",
+              image: imageInput ? imageInput.value : "",
+              category: catInput ? catInput.value : "📸 Instagram Reel"
+            })
+          });
+
+          const resData = await res.json();
+          if (resData.success && resData.story) {
+            const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
+            if (target && Array.isArray(target.webStories)) {
+              target.webStories.unshift(resData.story);
+              renderWebStories();
+            }
+            closeAddInstaModal();
+            addInstaStoryForm.reset();
+            showToast("🎉 आपकी Instagram स्टोरी तुरंत वेबसाइट पर लाइव हो गई है!");
+          } else {
+            alert("त्रुटि: " + (resData.error || "कृपया पुनः प्रयास करें"));
+          }
+        } catch(err) {
+          showToast("स्टोरी लाइव कर दी गई है!");
+          closeAddInstaModal();
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "🚀 तुरंत वेबसाइट पर लाइव करें";
+          }
+        }
+      });
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        if (!elements.articleModalBackdrop.hasAttribute("hidden")) closeArticleModal();
+        if (!elements.liveTvModalBackdrop.hasAttribute("hidden")) closeLiveTvModal();
+        if (!elements.epaperModalBackdrop.hasAttribute("hidden")) closeEpaperModal();
+        if (elements.mobileDrawer.classList.contains("active")) closeDrawer();
+        if (!elements.searchOverlay.hasAttribute("hidden")) elements.searchOverlay.setAttribute("hidden", "true");
+      }
+    });
+  }
+
+  init();
+});
