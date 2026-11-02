@@ -326,7 +326,14 @@ document.addEventListener("DOMContentLoaded", () => {
           const articles = state.currentLanguage === "hinglish"
             ? liveData.articles.map(hinglishArticle)
             : liveData.articles;
-          target.articles = articles;
+          const latestKeys = new Set(articles.map(item => String(item.articleUrl || item.title || "").toLowerCase()));
+          const retainedMore = (state.moreNewsExtra || []).filter(item => {
+            const key = String(item.articleUrl || item.title || "").toLowerCase();
+            if (!key || latestKeys.has(key)) return false;
+            latestKeys.add(key);
+            return true;
+          });
+          target.articles = [...articles, ...retainedMore];
           target.lastUpdated = liveData.lastUpdated || null;
           updateNewsRefreshStatus(liveData);
           const newest = articles[0];
@@ -577,9 +584,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getArticleImage(item) {
     const original = item && typeof item.image === "string" ? item.image.trim() : "";
-    if (!/^https:\/\//i.test(original)) return "";
+    if (!/^https?:\/\//i.test(original)) return "";
     try {
       const url = new URL(original);
+      if (url.protocol === "http:") url.protocol = "https:";
       if (/(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(url.hostname.toLowerCase())) return "";
       if (/(logo|favicon|placeholder|no-image|default-image|avatar|profile|icon)([-_.\/]|$)/i.test(url.pathname)) return "";
       return original;
