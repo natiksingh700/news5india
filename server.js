@@ -248,6 +248,12 @@ function isTrustedPublisher(source) {
   return !!normalized && TRUSTED_PUBLISHER_PATTERNS.some(name => normalized === name || normalized.includes(name));
 }
 
+function requiresEditorialReview(item) {
+  const text = `${item.title || ""} ${item.description || ""}`;
+  // High-impact/sensitive claims are not auto-published; an editor must verify them first.
+  return /(बलात्कार|यौन शोषण|नाबालिग|हत्या|मौत|मृत्यु|दंगा|सांप्रदायिक|धार्मिक तनाव|जातीय हिंसा|आतंक|आतंकी|आरोपी|गिरफ्तार|चुनाव परिणाम|मतदान|एग्जिट पोल|भूकंप|बाढ़|महामारी|वैक्सीन|rape|sexual assault|minor|murder|death|riot|communal|terror|accused|arrest|election result|exit poll|earthquake|flood|pandemic|vaccine)/i.test(text);
+}
+
 function isRecentArticle(pubDate) {
   const published = Date.parse(pubDate || "");
   if (!Number.isFinite(published)) return false;
@@ -339,8 +345,8 @@ async function autoUpdateAllNews() {
     try {
       const rawXml = await fetchRaw(feed.url);
       const parsedItems = parseXmlItems(rawXml, Math.max(feed.maxItems * 5, 20));
-      const items = parsedItems.filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) && isRecentArticle(item.pubDate)).slice(0, feed.maxItems);
-      console.log('   🔎 ' + feed.category + ': ' + (parsedItems.length - items.length) + ' items withheld (untrusted source or stale date)');
+      const items = parsedItems.filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) && isRecentArticle(item.pubDate) && !requiresEditorialReview(item)).slice(0, feed.maxItems);
+      console.log('   🔎 ' + feed.category + ': ' + (parsedItems.length - items.length) + ' items withheld (untrusted source, stale date, or editorial review required)');
 
       items.forEach((item, i) => {
         // Deduplicate by title substring
