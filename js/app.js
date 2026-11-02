@@ -145,7 +145,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Silent background auto-sync immediately and every 1 minute (हर मिनट ऑटो-रिफ्रेश)
     silentBackgroundSync();
-    setInterval(silentBackgroundSync, 60 * 1000);
+    setInterval(silentBackgroundSync, 30 * 1000);
 
     // Fast 30-second silent sync for Instagram stories (@news5indiaa)
     syncInstagramStories();
