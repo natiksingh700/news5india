@@ -406,7 +406,13 @@ const ENGLISH_CATEGORY_NAMES = {
   'विज्ञान और अंतरिक्ष':'Science & Space', 'शिक्षा और परीक्षा':'Education',
   'सरकारी नौकरी और भर्ती':'Government Jobs', 'स्टार्टअप और अर्थव्यवस्था':'Startups & Economy',
   'स्वास्थ्य समाचार':'Health', 'मौसम और मानसून':'Weather', 'कृषि और किसान':'Agriculture',
-  'पर्यावरण':'Environment', 'मथुरा-वृंदावन':'Mathura-Vrindavan', 'आगरा':'Agra'
+  'पर्यावरण':'Environment', 'अपराध':'Crime', 'धर्म और आस्था':'Religion & Faith', 'लाइफस्टाइल':'Lifestyle',
+  'कानून और कोर्ट':'Law & Courts', 'डिफेंस':'Defence', 'फैक्ट चेक':'Fact Check',
+  'पर्सनल फाइनेंस':'Personal Finance', 'सोना-चांदी और बाजार':'Gold, Silver & Markets',
+  'यात्रा और पर्यटन':'Travel & Tourism', 'वायरल और ट्रेंडिंग':'Viral & Trending',
+  'ग्राउंड रिपोर्ट':'Ground Reports', 'महिला जगत':'Women', 'करियर':'Careers',
+  'सरकार और नीति':'Government & Policy', 'यूपी क्राइम':'Uttar Pradesh Crime',
+  'मथुरा-वृंदावन':'Mathura-Vrindavan', 'आगरा':'Agra'
 };
 
 function feedsForLanguage(language) {
