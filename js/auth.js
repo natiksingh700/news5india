@@ -21,12 +21,57 @@
     $('n5AdminPanel').hidden=!(user&&user.role==='admin');
     const legacy=$('openAddInstaModalBtn');
     if(legacy)legacy.hidden=!(user&&user.role==='admin');
+    const adForm=$('n5AdForm');
+    if(adForm)adForm.hidden=!(user&&user.role==='admin');
+    const currentAd=$('n5AdCurrent');
+    if(currentAd)currentAd.hidden=!(user&&user.role==='admin');
+    if(user&&user.role==='admin')loadAdminAdvertisement();
   }
   async function api(url,options={}){
     const res=await fetch(url,{credentials:'same-origin',...options,headers:{'Content-Type':'application/json',...(options.headers||{})}});
     const data=await res.json().catch(()=>({}));
     if(!res.ok)throw new Error(data.error||'Request असफल रहा।');
     return data;
+  }
+  function renderPublicAd(ad){
+    const slot=$('stickySponsorAd');
+    if(!slot || !ad || !ad.image_data)return;
+    slot.replaceChildren();
+    const strip=document.createElement('div');strip.className='ad-tag-strip';
+    const label=document.createElement('span');label.className='ad-label';label.textContent='विज्ञापन';
+    const sponsor=document.createElement('span');sponsor.className='ad-sponsor';sponsor.textContent=ad.sponsor||'प्रायोजित';
+    strip.append(label,sponsor);
+    const visual=document.createElement('div');visual.className='n5-sticky-ad-content';
+    const image=document.createElement('img');image.src=ad.image_data;image.alt=ad.title||'Sponsored advertisement';image.loading='lazy';
+    image.className='n5-sticky-ad-image';
+    if(ad.click_url){
+      const link=document.createElement('a');link.href=ad.click_url;link.target='_blank';link.rel='noopener noreferrer sponsored';link.setAttribute('aria-label',ad.title||'विज्ञापन खोलें');link.append(image);visual.append(link);
+    }else visual.append(image);
+    const caption=document.createElement('p');caption.className='n5-sticky-ad-title';caption.textContent=ad.title||'प्रायोजित विज्ञापन';
+    visual.append(caption);slot.append(strip,visual);
+  }
+  async function loadAdvertisement(){
+    try{
+      const data=await api('/api/advertisements');
+      if(data.advertisement)renderPublicAd(data.advertisement);
+    }catch(e){console.warn('Advertisement load failed:',e.message);}
+  }
+  async function loadAdminAdvertisement(){
+    const current=$('n5AdCurrent');if(!current)return;
+    try{
+      const data=await api('/api/advertisements');
+      current.replaceChildren();
+      if(!data.advertisement){current.textContent='अभी कोई active विज्ञापन नहीं है।';return;}
+      const ad=data.advertisement;
+      const preview=document.createElement('img');preview.src=ad.image_data;preview.alt=ad.title;preview.className='n5-admin-ad-preview';
+      const info=document.createElement('p');info.textContent=ad.title+' • '+(ad.sponsor||'प्रायोजित');
+      const remove=document.createElement('button');remove.type='button';remove.className='n5-account-btn';remove.textContent='विज्ञापन हटाएं';
+      remove.addEventListener('click',async()=>{
+        if(!confirm('क्या आप active विज्ञापन हटाना चाहते हैं?'))return;
+        try{await api('/api/advertisements/'+ad.id,{method:'DELETE'});current.textContent='विज्ञापन हटा दिया गया।';const slot=$('stickySponsorAd');if(slot)slot.replaceChildren();}catch(e){alert(e.message);}
+      });
+      current.append(preview,info,remove);
+    }catch(e){current.textContent='विज्ञापन की जानकारी लोड नहीं हो पाई।';}
   }
   async function loadReels(){
     const grid=$('n5ReelsGrid');if(!grid)return;
@@ -78,6 +123,25 @@
   $('n5LogoutBtn').addEventListener('click',async()=>{
     try{await api('/api/auth/logout',{method:'POST',body:'{}'});}finally{renderUser(null);loadReels();}
   });
+  const adForm=$('n5AdForm');
+  if(adForm)adForm.addEventListener('submit',async e=>{
+    e.preventDefault();
+    const button=$('n5AdPublish'),message=$('n5AdMessage'),file=$('n5AdImage').files[0];
+    if(!file){message.textContent='कृपया विज्ञापन की इमेज चुनें।';return;}
+    if(file.size>2_500_000){message.textContent='इमेज 2.5 MB से छोटी रखें।';return;}
+    button.disabled=true;message.textContent='विज्ञापन अपलोड हो रहा है...';
+    try{
+      const imageData=await new Promise((resolve,reject)=>{
+        const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error('इमेज पढ़ी नहीं जा सकी।'));reader.readAsDataURL(file);
+      });
+      await api('/api/advertisements',{method:'POST',body:JSON.stringify({
+        title:$('n5AdTitle').value.trim(),sponsor:$('n5AdSponsor').value.trim(),
+        clickUrl:$('n5AdLink').value.trim(),imageData
+      })});
+      adForm.reset();message.textContent='विज्ञापन सफलतापूर्वक पब्लिश हो गया!';
+      await loadAdvertisement();await loadAdminAdvertisement();
+    }catch(err){message.textContent=err.message;}finally{button.disabled=false;}
+  });
   $('n5ReelForm').addEventListener('submit',async e=>{
     e.preventDefault();const btn=$('n5ReelPublish'),msg=$('n5ReelMessage');btn.disabled=true;msg.textContent='रील पब्लिश हो रही है...';
     try{
@@ -85,5 +149,6 @@
       $('n5ReelForm').reset();msg.textContent='रील सफलतापूर्वक पब्लिश हो गई!';await loadReels();
     }catch(err){msg.textContent=err.message;}finally{btn.disabled=false;}
   });
+  loadAdvertisement();
   api('/api/auth/me').then(result=>{renderUser(result.authenticated?result.user:null);loadReels();}).catch(()=>{renderUser(null);loadReels();});
 })();
