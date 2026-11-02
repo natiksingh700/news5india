@@ -243,9 +243,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (node.nodeType === Node.TEXT_NODE) {
       if (!originalTextNodes.has(node)) originalTextNodes.set(node, node.nodeValue);
       const original = originalTextNodes.get(node);
-      if (state.currentLanguage === "hinglish") node.nodeValue = romanizeHindiText(original);
-      else if (state.currentLanguage === "en") node.nodeValue = interfaceEnglish[original.trim()] ? original.replace(original.trim(), interfaceEnglish[original.trim()]) : original;
-      else node.nodeValue = original;
+      let translated = original;
+      if (state.currentLanguage === "hinglish") translated = romanizeHindiText(original);
+      else if (state.currentLanguage === "en" && interfaceEnglish[original.trim()]) translated = original.replace(original.trim(), interfaceEnglish[original.trim()]);
+      if (node.nodeValue !== translated) node.nodeValue = translated;
       return;
     }
     if (node.nodeType !== Node.ELEMENT_NODE) return;
@@ -260,8 +261,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (node.matches && node.matches("#categoryNav .nav-link")) {
       const slug = node.getAttribute("data-category");
-      const englishCategories = {all:"Home",breaking:"Breaking News",national:"National",state:"States / Cities",politics:"Politics",sports:"Cricket / Sports",entertainment:"Entertainment",business:"Business",world:"World",movies:"Movies",ott:"Web Series / OTT",trailers:"Trailers",boxoffice:"Box Office",science:"Science",education:"Education",jobs:"Jobs",ai:"AI",gadgets:"Gadgets",gaming:"Gaming",auto:"Auto / EV",health:"Health",weather:"Weather",agriculture:"Agriculture",environment:"Environment",tech:"Technology",videos:"Videos",webstories:"Web Stories"};
-      if (state.currentLanguage === "en" && englishCategories[slug]) node.textContent = (slug === "breaking" ? "⚡ " : "") + englishCategories[slug];
+      const hindiCategories = {all:"होम",breaking:"⚡ बड़ी खबर",national:"देश",state:"राज्य / शहर",politics:"राजनीति",sports:"क्रिकेट / खेल",entertainment:"मनोरंजन",business:"बिज़नेस",world:"दुनिया",movies:"फिल्में",ott:"वेब सीरीज़ / OTT",trailers:"ट्रेलर",boxoffice:"बॉक्स ऑफिस",science:"विज्ञान",education:"शिक्षा",jobs:"नौकरी",ai:"AI",gadgets:"गैजेट्स",gaming:"गेमिंग",auto:"ऑटो / EV",health:"हेल्थ",weather:"मौसम",agriculture:"कृषि",environment:"पर्यावरण",tech:"टेक",videos:"वीडियो",webstories:"वेब स्टोरीज़"};
+      const englishCategories = {all:"Home",breaking:"⚡ Breaking News",national:"National",state:"States / Cities",politics:"Politics",sports:"Cricket / Sports",entertainment:"Entertainment",business:"Business",world:"World",movies:"Movies",ott:"Web Series / OTT",trailers:"Trailers",boxoffice:"Box Office",science:"Science",education:"Education",jobs:"Jobs",ai:"AI",gadgets:"Gadgets",gaming:"Gaming",auto:"Auto / EV",health:"Health",weather:"Weather",agriculture:"Agriculture",environment:"Environment",tech:"Technology",videos:"Videos",webstories:"Web Stories"};
+      const hindi = hindiCategories[slug] || node.textContent;
+      const value = state.currentLanguage === "en" ? (englishCategories[slug] || hindi) :
+        state.currentLanguage === "hinglish" ? romanizeHindiText(hindi) : hindi;
+      if (node.textContent !== value) node.textContent = value;
+      return;
     }
     node.childNodes && node.childNodes.forEach(translateNode);
   }
