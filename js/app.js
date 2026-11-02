@@ -262,8 +262,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (node.matches && node.matches("#categoryNav .nav-link")) {
       const slug = node.getAttribute("data-category");
-      const hindiCategories = {all:"होम",breaking:"⚡ बड़ी खबर",national:"देश",state:"राज्य / शहर",politics:"राजनीति",sports:"क्रिकेट / खेल",entertainment:"मनोरंजन",business:"बिज़नेस",world:"दुनिया",movies:"फिल्में",ott:"वेब सीरीज़ / OTT",trailers:"ट्रेलर",boxoffice:"बॉक्स ऑफिस",science:"विज्ञान",education:"शिक्षा",jobs:"नौकरी",ai:"AI",gadgets:"गैजेट्स",gaming:"गेमिंग",auto:"ऑटो / EV",health:"हेल्थ",weather:"मौसम",agriculture:"कृषि",environment:"पर्यावरण",tech:"टेक",videos:"वीडियो",webstories:"वेब स्टोरीज़"};
-      const englishCategories = {all:"Home",breaking:"⚡ Breaking News",national:"National",state:"States / Cities",politics:"Politics",sports:"Cricket / Sports",entertainment:"Entertainment",business:"Business",world:"World",movies:"Movies",ott:"Web Series / OTT",trailers:"Trailers",boxoffice:"Box Office",science:"Science",education:"Education",jobs:"Jobs",ai:"AI",gadgets:"Gadgets",gaming:"Gaming",auto:"Auto / EV",health:"Health",weather:"Weather",agriculture:"Agriculture",environment:"Environment",tech:"Technology",videos:"Videos",webstories:"Web Stories"};
+      const hindiCategories = {all:"होम",breaking:"⚡ बड़ी खबर",national:"देश",state:"राज्य / शहर",politics:"राजनीति",sports:"क्रिकेट / खेल",entertainment:"मनोरंजन",business:"बिज़नेस",world:"दुनिया",movies:"फिल्में",ott:"वेब सीरीज़ / OTT",trailers:"ट्रेलर",boxoffice:"बॉक्स ऑफिस",science:"विज्ञान",education:"शिक्षा",jobs:"नौकरी",ai:"AI",gadgets:"गैजेट्स",gaming:"गेमिंग",auto:"ऑटो / EV",health:"हेल्थ",weather:"मौसम",agriculture:"कृषि",environment:"पर्यावरण",tech:"टेक",crime:"क्राइम",religion:"धर्म",lifestyle:"लाइफस्टाइल",law:"कानून",defense:"डिफेंस",factcheck:"फैक्ट चेक",finance:"पर्सनल फाइनेंस",markets:"सोना-चांदी",travel:"ट्रैवल",trending:"वायरल / ट्रेंडिंग",ground:"ग्राउंड रिपोर्ट",women:"महिला जगत",career:"करियर",governance:"सरकार / नीति",videos:"वीडियो",webstories:"वेब स्टोरीज़"};
+      const englishCategories = {all:"Home",breaking:"⚡ Breaking News",national:"National",state:"States / Cities",politics:"Politics",sports:"Cricket / Sports",entertainment:"Entertainment",business:"Business",world:"World",movies:"Movies",ott:"Web Series / OTT",trailers:"Trailers",boxoffice:"Box Office",science:"Science",education:"Education",jobs:"Jobs",ai:"AI",gadgets:"Gadgets",gaming:"Gaming",auto:"Auto / EV",health:"Health",weather:"Weather",agriculture:"Agriculture",environment:"Environment",tech:"Technology",crime:"Crime",religion:"Religion",lifestyle:"Lifestyle",law:"Law & Courts",defense:"Defence",factcheck:"Fact Check",finance:"Personal Finance",markets:"Gold & Silver",travel:"Travel",trending:"Viral / Trending",ground:"Ground Reports",women:"Women",career:"Careers",governance:"Government & Policy",videos:"Videos",webstories:"Web Stories"};
       const hindi = hindiCategories[slug] || node.textContent;
       const value = state.currentLanguage === "en" ? (englishCategories[slug] || hindi) :
         state.currentLanguage === "hinglish" ? romanizeHindiText(hindi) : hindi;
@@ -728,6 +728,10 @@ document.addEventListener("DOMContentLoaded", () => {
       auto: "ऑटो और EV", science: "विज्ञान और अंतरिक्ष", education: "शिक्षा और परीक्षा",
       jobs: "सरकारी नौकरी और भर्ती", health: "स्वास्थ्य", weather: "मौसम",
       agriculture: "कृषि", environment: "पर्यावरण", breaking: "बड़ी खबर",
+      crime: "अपराध", religion: "धर्म और आस्था", lifestyle: "लाइफस्टाइल", law: "कानून और कोर्ट",
+      defense: "डिफेंस", factcheck: "फैक्ट चेक", finance: "पर्सनल फाइनेंस", markets: "सोना-चांदी और बाजार",
+      travel: "यात्रा और पर्यटन", trending: "वायरल और ट्रेंडिंग", ground: "ग्राउंड रिपोर्ट",
+      women: "महिला जगत", career: "करियर", governance: "सरकार और नीति",
       videos: "वीडियो", webstories: "वेब स्टोरीज़"
     };
     const englishMap = {
@@ -737,7 +741,10 @@ document.addEventListener("DOMContentLoaded", () => {
       ai: "AI & Tech", gadgets: "Gadgets", gaming: "Gaming", auto: "Auto & EV",
       science: "Science", education: "Education", jobs: "Jobs", health: "Health",
       weather: "Weather", agriculture: "Agriculture", environment: "Environment",
-      breaking: "Breaking News", videos: "Videos", webstories: "Web Stories"
+      breaking: "Breaking News", crime: "Crime", religion: "Religion", lifestyle: "Lifestyle",
+      law: "Law & Courts", defense: "Defence", factcheck: "Fact Check", finance: "Personal Finance",
+      markets: "Gold & Silver", travel: "Travel", trending: "Viral & Trending", ground: "Ground Reports",
+      women: "Women", career: "Careers", governance: "Government & Policy", videos: "Videos", webstories: "Web Stories"
     };
     const value = state.currentLanguage === "en" ? (englishMap[slug] || map[slug] || slug) : (map[slug] || slug);
     return state.currentLanguage === "hinglish" ? romanizeHindiText(value) : value;
