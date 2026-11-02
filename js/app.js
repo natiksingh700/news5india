@@ -17,6 +17,12 @@ document.addEventListener("DOMContentLoaded", () => {
     visibleArticleCount: 12,
     feedKey: "",
     feedObserver: null,
+    moreNewsPage: 0,
+    moreNewsLoading: false,
+    moreNewsExhausted: false,
+    moreNewsPaused: false,
+    moreNewsExtra: [],
+
     tickerIndex: 0,
     isTickerPlaying: true,
     tickerInterval: null,
@@ -571,23 +577,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getArticleImage(item) {
     const original = item && typeof item.image === "string" ? item.image.trim() : "";
-    const generic = (() => {
-      if (!/^https:\/\//i.test(original)) return true;
-      try {
-        const host = new URL(original).hostname.toLowerCase();
-        return /(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(host) ||
-          /(logo|favicon|placeholder|no-image|default-image|avatar|profile|icon)([-_.\/]|$)/i.test(new URL(original).pathname);
-      } catch { return true; }
-    })();
-    if (original && !generic) return original;
-    const title = String(item && item.title || "News5India");
-    let hash = 0;
-    for (let i = 0; i < title.length; i++) hash = ((hash << 5) - hash + title.charCodeAt(i)) | 0;
-    const hue = Math.abs(hash) % 360;
-    const label = String(item && item.category || "NEWS").replace(/[<>&"]/g, "").slice(0, 28);
-    const safeTitle = title.replace(/[<>&"]/g, "").slice(0, 66);
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(' + hue + ',48%,32%)"/><stop offset="1" stop-color="hsl(' + ((hue+42)%360) + ',58%,15%)"/></linearGradient></defs><rect width="800" height="450" fill="url(#g)"/><path d="M0 330 Q220 210 430 340 T800 280 V450 H0Z" fill="#fff" opacity=".055"/><circle cx="690" cy="90" r="145" fill="#fff" opacity=".055"/><rect x="42" y="42" width="10" height="62" rx="5" fill="#ef3340"/><text x="72" y="82" fill="#fff" opacity=".9" font-family="Arial,sans-serif" font-size="25" font-weight="700">' + label + '</text><text x="48" y="245" fill="#fff" font-family="Arial,sans-serif" font-size="32" font-weight="700">' + safeTitle + '</text><text x="48" y="405" fill="#fff" opacity=".72" font-family="Arial,sans-serif" font-size="18" font-weight="700">NEWS5INDIA  •  NEWS DESK</text></svg>';
-    return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+    if (!/^https:\/\//i.test(original)) return "";
+    try {
+      const url = new URL(original);
+      if (/(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(url.hostname.toLowerCase())) return "";
+      if (/(logo|favicon|placeholder|no-image|default-image|avatar|profile|icon)([-_.\/]|$)/i.test(url.pathname)) return "";
+      return original;
+    } catch { return ""; }
   }
 
   function bindNewsImageFallbacks(root) {
@@ -596,8 +592,10 @@ document.addEventListener("DOMContentLoaded", () => {
       img.addEventListener("error", () => {
         if (img.dataset.fallbackApplied === "true") return;
         img.dataset.fallbackApplied = "true";
-        const badge = img.parentElement && img.parentElement.querySelector(".card-category-badge,.modal-category");
-        img.src = getArticleImage({category: badge ? badge.textContent : "NEWS", title: img.alt});
+        const placeholder = document.createElement("div");
+        placeholder.className = "news-image-unavailable";
+        placeholder.textContent = "फोटो उपलब्ध नहीं";
+        img.replaceWith(placeholder);
       }, { once: true });
     });
   }
@@ -711,6 +709,12 @@ document.addEventListener("DOMContentLoaded", () => {
     if (state.feedKey !== nextFeedKey) {
       state.feedKey = nextFeedKey;
       state.visibleArticleCount = 12;
+      state.moreNewsPage = 0;
+      state.moreNewsLoading = false;
+      state.moreNewsExhausted = false;
+      state.moreNewsPaused = false;
+      state.moreNewsEmptyPages = 0;
+      state.moreNewsExtra = [];
     }
     renderCategoryShelves();
 
@@ -777,9 +781,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const remaining = filtered.length - visibleArticles.length;
+    const canFetchMore = !state.searchQuery && !state.moreNewsExhausted;
     const loadMoreMarkup = remaining > 0
-      ? `<div class="news-load-more-wrap" id="newsLoadMoreWrap"><div class="news-load-more-sentinel" id="newsLoadMoreSentinel" aria-hidden="true"></div><button type="button" class="news-load-more-btn" id="newsLoadMoreBtn">और खबरें देखें <span>↓</span></button><small>${remaining} और खबरें उपलब्ध</small></div>`
-      : `<div class="news-end-note" id="newsEndNote">अभी की सभी उपलब्ध खबरें दिखाई जा चुकी हैं। नई खबरें आते ही यहाँ जुड़ेंगी।</div>`;
+      ? \`<div class="news-load-more-wrap" id="newsLoadMoreWrap"><div class="news-load-more-sentinel" id="newsLoadMoreSentinel" aria-hidden="true"></div><button type="button" class="news-load-more-btn" id="newsLoadMoreBtn">और खबरें देखें <span>↓</span></button><small>\${remaining} और खबरें उपलब्ध</small></div>\`
+      : canFetchMore
+        ? \`<div class="news-load-more-wrap" id="newsLoadMoreWrap">\${state.moreNewsPaused ? "" : '<div class="news-load-more-sentinel" id="newsLoadMoreSentinel" aria-hidden="true"></div>'}<button type="button" class="news-load-more-btn" id="newsLoadMoreBtn" \${state.moreNewsLoading ? "disabled" : ""}>\${state.moreNewsLoading ? "ताज़ा खबरें लोड हो रही हैं…" : "और ताज़ा खबरें लोड करें ↓"}</button><small>स्क्रॉल करते रहें — नई खबरें जोड़ी जाएँगी</small></div>\`
+        : \`<div class="news-end-note" id="newsEndNote">फिलहाल नई खबरें उपलब्ध नहीं हैं। कुछ देर बाद फिर आएँ।</div>\`;
     elements.newsCardsGrid.insertAdjacentHTML("beforeend", loadMoreMarkup);
 
     const loadButton = document.getElementById("newsLoadMoreBtn");
@@ -794,15 +801,52 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function loadMoreArticles() {
-    const data = window.NEWS_DATA || (typeof NEWS_DATA !== "undefined" ? NEWS_DATA : null);
-    const total = state.searchQuery && state.searchResults
-      ? state.searchResults.length
-      : getFilteredArticles().length;
-    if (state.visibleArticleCount >= total) return;
+  async function loadMoreArticles() {
+    if (state.moreNewsLoading || state.moreNewsExhausted) return;
     if (state.feedObserver) state.feedObserver.disconnect();
-    state.visibleArticleCount = Math.min(state.visibleArticleCount + 12, total);
+    const total = getFilteredArticles().length;
+    if (state.visibleArticleCount < total) {
+      state.visibleArticleCount = Math.min(state.visibleArticleCount + 12, total);
+      state.moreNewsPaused = false;
+      renderNewsFeed();
+      return;
+    }
+    if (state.searchQuery) return;
+    state.moreNewsLoading = true;
+    state.moreNewsPaused = false;
     renderNewsFeed();
+    try {
+      const lang = state.currentLanguage === "en" ? "en" : "hi";
+      const response = await fetch("/api/news/more?lang=" + lang + "&page=" + state.moreNewsPage, {cache:"no-store"});
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "अगली खबरें लोड नहीं हो पाईं");
+      state.moreNewsPage += 1;
+      const data = window.NEWS_DATA || (typeof NEWS_DATA !== "undefined" ? NEWS_DATA : null);
+      const existing = new Set((data && data.articles || []).map(item => String(item.articleUrl || item.title || "").toLowerCase()));
+      const incoming = (Array.isArray(payload.articles) ? payload.articles : []).filter(item => {
+        const key = String(item.articleUrl || item.title || "").toLowerCase();
+        if (!key || existing.has(key)) return false;
+        existing.add(key);
+        return true;
+      }).map(item => state.currentLanguage === "hinglish" ? hinglishArticle(item) : item);
+      if (!incoming.length) {
+        state.moreNewsPaused = true;
+        state.moreNewsEmptyPages = (state.moreNewsEmptyPages || 0) + 1;
+        if (state.moreNewsEmptyPages >= 5) state.moreNewsExhausted = true;
+      } else {
+        state.moreNewsEmptyPages = 0;
+        state.moreNewsExtra.push(...incoming);
+        if (data) data.articles = [...(data.articles || []), ...incoming];
+        state.visibleArticleCount = Math.min(getFilteredArticles().length, state.visibleArticleCount + 12);
+      }
+    } catch (error) {
+      console.warn("[News5India infinite feed]", error);
+      state.moreNewsPaused = true;
+      showToast("अगली खबरें अभी लोड नहीं हुईं। दोबारा कोशिश करें।");
+    } finally {
+      state.moreNewsLoading = false;
+      renderNewsFeed();
+    }
   }
 
   function renderCategoryShelves() {
