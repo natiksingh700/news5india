@@ -524,10 +524,10 @@ function extractRssImage(itemXml) {
   }
   const htmlImageTags = itemXml.match(/<img\b[^>]*>/gi) || [];
   for (const tag of htmlImageTags) {
-    for (const attr of ['src','data-src','data-original','data-lazy-src','srcset']) {
-      const value = (tag.match(new RegExp('\\b' + attr + '\\s*=\\s*["\\']([^"\\']+)["\\']','i')) || [])[1];
-      if (value) candidates.push(attr === 'srcset' ? value.split(',')[0].trim().split(/\s+/)[0] : value);
-    }
+    const srcMatch = tag.match(/\b(?:src|data-src|data-original|data-lazy-src)\s*=\s*["']([^"']+)["']/i);
+    const srcsetMatch = tag.match(/\bsrcset\s*=\s*["']([^"']+)["']/i);
+    if (srcMatch) candidates.push(srcMatch[1]);
+    if (srcsetMatch) candidates.push(srcsetMatch[1].split(',')[0].trim().split(/\s+/)[0]);
   }
   for (let candidate of candidates) {
     candidate = cleanHtmlEntities(String(candidate).trim()).replace(/&amp;/g, '&');
