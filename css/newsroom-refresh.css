@@ -466,3 +466,127 @@ body{background:#f0f2f5}
 .epaper-real-info .btn-primary-action{max-width:440px;margin:0 auto;min-height:48px;font-weight:900}
 .epaper-real-info .epaper-print-hint{font-size:12px;color:#7b8492;margin:12px auto 0}
 @media(max-width:640px){.epaper-real-info{padding:20px 16px}.epaper-real-info h4{font-size:20px}.epaper-real-info ul{font-size:13px}}
+
+
+/* Refined article reader: spacious, editorial, and easy to read */
+#articleModalBackdrop {
+  align-items: stretch;
+  justify-content: center;
+  padding: 0;
+  background: rgba(12, 18, 28, .72);
+  backdrop-filter: blur(5px);
+}
+#articleModalBackdrop .article-modal {
+  width: min(100%, 1120px);
+  max-width: 1120px;
+  height: 100dvh;
+  max-height: 100dvh;
+  border: 0;
+  border-radius: 0;
+  box-shadow: 0 0 55px rgba(0,0,0,.22);
+  background: var(--bg-surface);
+}
+#articleModalBackdrop .modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  min-height: 66px;
+  padding: 12px clamp(16px, 3vw, 34px);
+  background: var(--bg-surface);
+}
+#articleModalBackdrop .modal-body-scroll {
+  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: clamp(20px, 4vw, 42px) clamp(18px, 4vw, 42px) 60px;
+  overflow-y: auto;
+}
+#articleModalBackdrop .modal-title {
+  max-width: 850px;
+  margin: 0 auto 22px;
+  font-size: clamp(1.65rem, 3vw, 2.55rem);
+  line-height: 1.3;
+  letter-spacing: -.025em;
+  color: var(--text-heading);
+}
+#articleModalBackdrop .modal-byline {
+  justify-content: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 0 0 18px;
+}
+#articleModalBackdrop .modal-share-strip {
+  margin-left: auto;
+}
+#articleModalBackdrop .modal-figure {
+  margin: 0 0 28px;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-surface-alt);
+}
+#articleModalBackdrop .modal-figure img {
+  display: block;
+  width: 100%;
+  max-height: min(52vh, 500px);
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+}
+#articleModalBackdrop .modal-caption {
+  padding: 9px 12px;
+  font-size: .78rem;
+}
+#articleModalBackdrop .modal-article-text {
+  max-width: 790px;
+  margin: 0 auto;
+  font-size: clamp(1.05rem, 1.3vw, 1.2rem);
+  line-height: 1.9;
+  color: var(--text-main);
+}
+#articleModalBackdrop .modal-article-text p {
+  margin: 0 0 1.15em;
+}
+#articleModalBackdrop .modal-comments-area {
+  max-width: 790px;
+  margin: 38px auto 0;
+}
+#articleModalBackdrop .modal-figure[hidden] {
+  display: none !important;
+}
+@media (min-width: 1200px) {
+  #articleModalBackdrop .article-modal {
+    border-left: 1px solid var(--border-light);
+    border-right: 1px solid var(--border-light);
+  }
+}
+@media (max-width: 640px) {
+  #articleModalBackdrop .article-modal {
+    width: 100%;
+    height: 100dvh;
+    border-radius: 0;
+  }
+  #articleModalBackdrop .modal-header {
+    min-height: 58px;
+    padding: 9px 12px;
+    gap: 8px;
+  }
+  #articleModalBackdrop .modal-actions {
+    gap: 5px;
+  }
+  #articleModalBackdrop .tts-btn {
+    padding: 6px 8px;
+    font-size: .75rem;
+  }
+  #articleModalBackdrop .modal-body-scroll {
+    padding: 22px 16px 42px;
+  }
+  #articleModalBackdrop .modal-byline {
+    align-items: flex-start;
+  }
+  #articleModalBackdrop .modal-share-strip {
+    width: 100%;
+    margin-left: 0;
+  }
+  #articleModalBackdrop .modal-figure img {
+    max-height: 34vh;
+  }
+}
