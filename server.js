@@ -470,6 +470,7 @@ async function runNewsUpdate(language = 'hi') {
   updateCycle++;
   const allArticles = [];
   const seenTitles = new Set();
+  const usedFallbackImages = new Set();
   const ts = Date.now();
 
   const activeFeeds = feedsForLanguage(language);
@@ -507,7 +508,12 @@ async function runNewsUpdate(language = 'hi') {
           source: item.source,
           articleUrl: item.articleUrl,
           readTime: language === 'en' ? '2 min' : '2 मिनट',
-          image: item.imageUrl || feed.images[i % feed.images.length],
+          image: item.imageUrl || (() => {
+            const candidates = Array.isArray(feed.images) ? feed.images : [];
+            const uniqueImage = candidates.find(url => url && !usedFallbackImages.has(url));
+            if (uniqueImage) { usedFallbackImages.add(uniqueImage); return uniqueImage; }
+            return '';
+          })(),
           views: "—",
           content: cleanContent
         };
