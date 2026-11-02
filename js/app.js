@@ -568,14 +568,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getArticleImage(item) {
     const original = item && typeof item.image === "string" ? item.image.trim() : "";
-    if (original && /^https:\/\//i.test(original)) return original;
+    const generic = (() => {
+      if (!/^https:\/\//i.test(original)) return true;
+      try {
+        const host = new URL(original).hostname.toLowerCase();
+        return /(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(host) ||
+          /(logo|favicon|placeholder|no-image|default-image|avatar|profile|icon)([-_.\/]|$)/i.test(new URL(original).pathname);
+      } catch { return true; }
+    })();
+    if (original && !generic) return original;
     const title = String(item && item.title || "News5India");
     let hash = 0;
     for (let i = 0; i < title.length; i++) hash = ((hash << 5) - hash + title.charCodeAt(i)) | 0;
     const hue = Math.abs(hash) % 360;
     const label = String(item && item.category || "NEWS").replace(/[<>&"]/g, "").slice(0, 28);
-    const safeTitle = title.replace(/[<>&"]/g, "").slice(0, 54);
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(' + hue + ',55%,25%)"/><stop offset="1" stop-color="hsl(' + ((hue+48)%360) + ',70%,12%)"/></linearGradient></defs><rect width="800" height="450" fill="url(#g)"/><circle cx="700" cy="70" r="190" fill="#fff" opacity=".06"/><circle cx="90" cy="420" r="210" fill="#fff" opacity=".05"/><text x="48" y="90" fill="#fff" opacity=".85" font-family="Arial,sans-serif" font-size="27" font-weight="700">' + label + '</text><path d="M48 120h100" stroke="#ef3340" stroke-width="8" stroke-linecap="round"/><text x="48" y="235" fill="#fff" font-family="Arial,sans-serif" font-size="30" font-weight="700">' + safeTitle + '</text><text x="48" y="405" fill="#fff" opacity=".7" font-family="Arial,sans-serif" font-size="19">NEWS5INDIA</text></svg>';
+    const safeTitle = title.replace(/[<>&"]/g, "").slice(0, 66);
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop stop-color="hsl(' + hue + ',48%,32%)"/><stop offset="1" stop-color="hsl(' + ((hue+42)%360) + ',58%,15%)"/></linearGradient></defs><rect width="800" height="450" fill="url(#g)"/><path d="M0 330 Q220 210 430 340 T800 280 V450 H0Z" fill="#fff" opacity=".055"/><circle cx="690" cy="90" r="145" fill="#fff" opacity=".055"/><rect x="42" y="42" width="10" height="62" rx="5" fill="#ef3340"/><text x="72" y="82" fill="#fff" opacity=".9" font-family="Arial,sans-serif" font-size="25" font-weight="700">' + label + '</text><text x="48" y="245" fill="#fff" font-family="Arial,sans-serif" font-size="32" font-weight="700">' + safeTitle + '</text><text x="48" y="405" fill="#fff" opacity=".72" font-family="Arial,sans-serif" font-size="18" font-weight="700">NEWS5INDIA  •  NEWS DESK</text></svg>';
     return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
   }
 
