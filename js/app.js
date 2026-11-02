@@ -66,6 +66,8 @@ document.addEventListener("DOMContentLoaded", () => {
     filterTitle: document.getElementById("filterTitle"),
     clearFilterBtn: document.getElementById("clearFilterBtn"),
     leadStoryContainer: document.getElementById("leadStoryContainer"),
+    topHeadlines: document.getElementById("topHeadlines"),
+    newsRefreshStatus: document.getElementById("newsRefreshStatus"),
     stateChips: document.getElementById("stateChips"),
     newsCardsGrid: document.getElementById("newsCardsGrid"),
     categoryShelves: document.getElementById("categoryShelves"),
@@ -135,6 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try { updateLiveDate(); } catch (e) { console.error("updateLiveDate error:", e); }
     try { renderCricketWidget(); } catch (e) { console.error("renderCricketWidget error:", e); }
     try { renderLeadStory(); } catch (e) { console.error("renderLeadStory error:", e); }
+    try { renderTopHeadlines(); } catch (e) { console.error("renderTopHeadlines error:", e); }
     try { renderNewsFeed(); } catch (e) { console.error("renderNewsFeed error:", e); }
     try { renderTicker(); } catch (e) { console.error("renderTicker error:", e); }
     try { renderWebStories(); } catch (e) { console.error("renderWebStories error:", e); }
@@ -262,8 +265,8 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     if (node.matches && node.matches("#categoryNav .nav-link")) {
       const slug = node.getAttribute("data-category");
-      const hindiCategories = {all:"होम",breaking:"⚡ बड़ी खबर",national:"देश",state:"राज्य / शहर",politics:"राजनीति",sports:"क्रिकेट / खेल",entertainment:"मनोरंजन",business:"बिज़नेस",world:"दुनिया",movies:"फिल्में",ott:"वेब सीरीज़ / OTT",trailers:"ट्रेलर",boxoffice:"बॉक्स ऑफिस",science:"विज्ञान",education:"शिक्षा",jobs:"नौकरी",ai:"AI",gadgets:"गैजेट्स",gaming:"गेमिंग",auto:"ऑटो / EV",health:"हेल्थ",weather:"मौसम",agriculture:"कृषि",environment:"पर्यावरण",tech:"टेक",crime:"क्राइम",religion:"धर्म",lifestyle:"लाइफस्टाइल",law:"कानून",defense:"डिफेंस",factcheck:"फैक्ट चेक",finance:"पर्सनल फाइनेंस",markets:"सोना-चांदी",travel:"ट्रैवल",trending:"वायरल / ट्रेंडिंग",ground:"ग्राउंड रिपोर्ट",women:"महिला जगत",career:"करियर",governance:"सरकार / नीति",videos:"वीडियो",webstories:"वेब स्टोरीज़"};
-      const englishCategories = {all:"Home",breaking:"⚡ Breaking News",national:"National",state:"States / Cities",politics:"Politics",sports:"Cricket / Sports",entertainment:"Entertainment",business:"Business",world:"World",movies:"Movies",ott:"Web Series / OTT",trailers:"Trailers",boxoffice:"Box Office",science:"Science",education:"Education",jobs:"Jobs",ai:"AI",gadgets:"Gadgets",gaming:"Gaming",auto:"Auto / EV",health:"Health",weather:"Weather",agriculture:"Agriculture",environment:"Environment",tech:"Technology",crime:"Crime",religion:"Religion",lifestyle:"Lifestyle",law:"Law & Courts",defense:"Defence",factcheck:"Fact Check",finance:"Personal Finance",markets:"Gold & Silver",travel:"Travel",trending:"Viral / Trending",ground:"Ground Reports",women:"Women",career:"Careers",governance:"Government & Policy",videos:"Videos",webstories:"Web Stories"};
+      const hindiCategories = {all:"होम",breaking:"⚡ बड़ी खबर",national:"देश",state:"राज्य / शहर",politics:"राजनीति",sports:"क्रिकेट / खेल",entertainment:"मनोरंजन",business:"बिज़नेस",world:"दुनिया",movies:"फिल्में",ott:"वेब सीरीज़ / OTT",tv:"टीवी शो",trailers:"ट्रेलर",boxoffice:"बॉक्स ऑफिस",science:"विज्ञान",education:"शिक्षा",jobs:"नौकरी",ai:"AI",gadgets:"गैजेट्स",gaming:"गेमिंग",auto:"ऑटो / EV",health:"हेल्थ",weather:"मौसम",agriculture:"कृषि",environment:"पर्यावरण",tech:"टेक",crime:"क्राइम",religion:"धर्म",lifestyle:"लाइफस्टाइल",law:"कानून",defense:"डिफेंस",factcheck:"फैक्ट चेक",finance:"पर्सनल फाइनेंस",markets:"सोना-चांदी",travel:"ट्रैवल",trending:"वायरल / ट्रेंडिंग",ground:"ग्राउंड रिपोर्ट",women:"महिला जगत",career:"करियर",governance:"सरकार / नीति",videos:"वीडियो",webstories:"वेब स्टोरीज़"};
+      const englishCategories = {all:"Home",breaking:"⚡ Breaking News",national:"National",state:"States / Cities",politics:"Politics",sports:"Cricket / Sports",entertainment:"Entertainment",business:"Business",world:"World",movies:"Movies",ott:"Web Series / OTT",tv:"TV Shows",trailers:"Trailers",boxoffice:"Box Office",science:"Science",education:"Education",jobs:"Jobs",ai:"AI",gadgets:"Gadgets",gaming:"Gaming",auto:"Auto / EV",health:"Health",weather:"Weather",agriculture:"Agriculture",environment:"Environment",tech:"Technology",crime:"Crime",religion:"Religion",lifestyle:"Lifestyle",law:"Law & Courts",defense:"Defence",factcheck:"Fact Check",finance:"Personal Finance",markets:"Gold & Silver",travel:"Travel",trending:"Viral / Trending",ground:"Ground Reports",women:"Women",career:"Careers",governance:"Government & Policy",videos:"Videos",webstories:"Web Stories"};
       const hindi = hindiCategories[slug] || node.textContent;
       const value = state.currentLanguage === "en" ? (englishCategories[slug] || hindi) :
         state.currentLanguage === "hinglish" ? romanizeHindiText(hindi) : hindi;
@@ -301,8 +304,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function silentBackgroundSync() {
     try {
-      const languageFile = state.currentLanguage === "en" ? "data/live-news-en.json" : "data/live-news.json";
-      const res = await fetch(languageFile + "?t=" + Date.now(), { cache: "no-store" });
+      const newsLanguage = state.currentLanguage === "en" ? "en" : "hi";
+      const res = await fetch("/api/news?lang=" + newsLanguage + "&t=" + Date.now(), { cache: "no-store" });
       if (res.ok) {
         const liveData = await res.json();
         const target = window.NEWS_DATA || (typeof NEWS_DATA !== 'undefined' ? NEWS_DATA : null);
@@ -311,6 +314,8 @@ document.addEventListener("DOMContentLoaded", () => {
             ? liveData.articles.map(hinglishArticle)
             : liveData.articles;
           target.articles = articles;
+          target.lastUpdated = liveData.lastUpdated || null;
+          updateNewsRefreshStatus(liveData);
           const newest = articles[0];
           target.leadStory = newest ? {
             ...newest,
@@ -320,6 +325,7 @@ document.addEventListener("DOMContentLoaded", () => {
             readTime: state.currentLanguage === "en" ? "2 min read" : "2 minute"
           } : null;
           renderLeadStory();
+          renderTopHeadlines();
           target.breaking = articles.slice(0, 5).map(article => ({
             id: "brk-" + article.id,
             title: article.title,
@@ -351,6 +357,41 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) {
       // Keep the news feed working even if Instagram is unavailable.
     }
+  }
+
+  function updateNewsRefreshStatus(data) {
+    if (!elements.newsRefreshStatus) return;
+    const updated = Date.parse(data && data.lastUpdated || "");
+    const ageMinutes = Number.isFinite(updated) ? Math.max(0, Math.floor((Date.now() - updated) / 60000)) : null;
+    if (data && data.refreshStatus === "stale-cleared") {
+      elements.newsRefreshStatus.textContent = "ताज़ा खबरों का इंतज़ार है";
+      elements.newsRefreshStatus.dataset.state = "waiting";
+    } else if (ageMinutes === null) {
+      elements.newsRefreshStatus.textContent = "अपडेट की जानकारी उपलब्ध नहीं";
+      elements.newsRefreshStatus.dataset.state = "waiting";
+    } else {
+      const ageText = ageMinutes < 1 ? "अभी अपडेट" : ageMinutes < 60 ? ageMinutes + " मिनट पहले अपडेट" : Math.floor(ageMinutes / 60) + " घंटे पहले अपडेट";
+      elements.newsRefreshStatus.textContent = "● " + ageText;
+      elements.newsRefreshStatus.dataset.state = ageMinutes <= 15 ? "fresh" : "aging";
+    }
+  }
+
+  function renderTopHeadlines() {
+    const host = elements.topHeadlines;
+    if (!host) return;
+    const data = window.NEWS_DATA || (typeof NEWS_DATA !== "undefined" ? NEWS_DATA : null);
+    const items = data && Array.isArray(data.articles) ? data.articles.slice(1, 6) : [];
+    host.innerHTML = items.length ? items.map((item, index) => `
+      <button type="button" class="top-headline-item" data-top-headline="${item.id}">
+        <span class="top-headline-number">${String(index + 1).padStart(2,"0")}</span>
+        <span class="top-headline-copy"><strong>${item.title}</strong><small>${item.category || "समाचार"} · ${item.date || ""}</small></span>
+      </button>`).join("") : '<p class="top-headlines-empty">ताज़ा बड़ी खबरें आते ही यहाँ दिखाई देंगी।</p>';
+    host.querySelectorAll("[data-top-headline]").forEach(button => {
+      button.addEventListener("click", () => {
+        const item = items.find(article => article.id === button.dataset.topHeadline);
+        if (item) openArticleModal(item);
+      });
+    });
   }
 
   function changeNewsLanguage(language) {
@@ -669,7 +710,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const desks = [
       ["national","देश की खबरें"],["state","राज्य और शहर"],["politics","राजनीति"],
       ["world","दुनिया"],["crime","अपराध"],["sports","खेल"],
-      ["business","बिज़नेस और बाजार"],["entertainment","मनोरंजन"],
+      ["business","बिज़नेस और बाजार"],["entertainment","मनोरंजन"],["movies","फिल्में और सिनेमा"],["ott","वेब सीरीज़ और OTT"],["tv","टीवी शो और सीरियल"],
       ["tech","टेक्नोलॉजी और AI"],["education","शिक्षा और परीक्षा"],
       ["jobs","नौकरी और करियर"],["health","हेल्थ"],
       ["weather","मौसम"],["agriculture","कृषि और किसान"],
@@ -722,7 +763,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const map = {
       national: "देश", world: "दुनिया", state: "राज्य व शहर",
       politics: "राजनीति", sports: "क्रिकेट व खेल", entertainment: "मनोरंजन",
-      movies: "फिल्में", ott: "वेब सीरीज़ और OTT", trailers: "ट्रेलर और टीज़र",
+      movies: "फिल्में", ott: "वेब सीरीज़ और OTT", tv: "टीवी शो और सीरियल", trailers: "ट्रेलर और टीज़र",
       boxoffice: "बॉक्स ऑफिस", business: "बिज़नेस व मार्केट", tech: "टेक्नोलॉजी",
       ai: "AI और टेक", gadgets: "मोबाइल और गैजेट्स", gaming: "गेमिंग और ई-स्पोर्ट्स",
       auto: "ऑटो और EV", science: "विज्ञान और अंतरिक्ष", education: "शिक्षा और परीक्षा",
@@ -736,7 +777,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
     const englishMap = {
       national: "National", world: "World", state: "State / City", politics: "Politics",
-      sports: "Sports", entertainment: "Entertainment", movies: "Movies", ott: "Web Series / OTT",
+      sports: "Sports", entertainment: "Entertainment", movies: "Movies", ott: "Web Series / OTT", tv: "TV Shows & Serials",
       trailers: "Trailers", boxoffice: "Box Office", business: "Business", tech: "Technology",
       ai: "AI & Tech", gadgets: "Gadgets", gaming: "Gaming", auto: "Auto & EV",
       science: "Science", education: "Education", jobs: "Jobs", health: "Health",
