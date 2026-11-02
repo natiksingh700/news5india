@@ -19,6 +19,8 @@
     account.textContent=user?(user.role==='admin'?'Admin: '+user.username:user.username):'लॉगिन / साइन अप';
     $('n5LogoutBtn').hidden=!user;
     $('n5AdminPanel').hidden=!(user&&user.role==='admin');
+    const adminStudioBtn=$('n5AdminStudioBtn');
+    if(adminStudioBtn)adminStudioBtn.hidden=!(user&&user.role==='admin');
     const adForm=$('n5AdForm');
     if(adForm)adForm.hidden=!(user&&user.role==='admin');
     const currentAd=$('n5AdCurrent');
@@ -164,7 +166,9 @@
       await loadSavedReels();
     }catch(e){grid.textContent='रील्स लोड नहीं हो पाईं।';}
   }
-  account.addEventListener('click',()=>user?$('n5AdminPanel').scrollIntoView({behavior:'smooth'}):(backdrop.hidden=false,setMode('login')));
+  account.addEventListener('click',()=>user?$('n5AdminPanel').scrollIntoView({behavior:'smooth',block:'center'}):(backdrop.hidden=false,setMode('login')));
+  const adminStudioBtn=$('n5AdminStudioBtn');
+  if(adminStudioBtn)adminStudioBtn.addEventListener('click',()=>{ $('n5AdminPanel').hidden=false; $('n5AdminPanel').scrollIntoView({behavior:'smooth',block:'center'}); $('n5ReelTitle').focus({preventScroll:true}); });
   $('n5AuthClose').addEventListener('click',()=>backdrop.hidden=true);
   backdrop.addEventListener('click',e=>{if(e.target===backdrop)backdrop.hidden=true;});
   $('n5LoginTab').addEventListener('click',()=>setMode('login'));
