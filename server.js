@@ -229,6 +229,30 @@ function fetchRaw(url) {
   });
 }
 
+// Only publish items attributed to established, identifiable news publishers.
+// This filter improves source quality; it cannot guarantee that every report is true.
+const TRUSTED_PUBLISHER_PATTERNS = [
+  "the hindu", "indian express", "hindustan times", "times of india", "ndtv",
+  "india today", "bbc news", "reuters", "associated press", "press trust of india",
+  "pti", "ani", "aaj tak", "abp news", "zee news", "news18", "tv9 bharatvarsh",
+  "etv bharat", "dd news", "amar ujala", "dainik jagran", "live hindustan",
+  "hindustan", "economic times", "business standard", "mint", "cnbc-tv18",
+  "moneycontrol", "espncricinfo", "cricbuzz", "the quint", "scroll.in",
+  "the wire", "deccan herald", "the telegraph", "india tv", "pib"
+];
+
+function isTrustedPublisher(source) {
+  const normalized = String(source || "").toLowerCase().replace(/\s+/g, " ").trim();
+  return !!normalized && TRUSTED_PUBLISHER_PATTERNS.some(name => normalized === name || normalized.includes(name));
+}
+
+function isRecentArticle(pubDate) {
+  const published = Date.parse(pubDate || "");
+  if (!Number.isFinite(published)) return false;
+  const age = Date.now() - published;
+  return age >= -60 * 60 * 1000 && age <= 72 * 60 * 60 * 1000;
+}
+
 // ─── XML Parser (extracts title + description + pubDate + source) ─────────────
 function cleanHtmlEntities(str) {
   return str
@@ -254,6 +278,7 @@ function parseXmlItems(xml, maxItems) {
     const descMatch = itemXml.match(/<description>([\s\S]*?)<\/description>/);
     const dateMatch = itemXml.match(/<pubDate>(.*?)<\/pubDate>/);
     const sourceMatch = itemXml.match(/<source[^>]*>(.*?)<\/source>/);
+    const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
     if (titleMatch && titleMatch[1]) {
       const rawTitle = stripAllHtml(titleMatch[1]);
       // Remove the " - Source" suffix Google News adds
@@ -274,7 +299,8 @@ function parseXmlItems(xml, maxItems) {
         title,
         source,
         description: desc,
-        pubDate: dateMatch ? dateMatch[1].trim() : ''
+        pubDate: dateMatch ? dateMatch[1].trim() : '',
+        articleUrl: linkMatch ? cleanHtmlEntities(linkMatch[1].trim()) : ''
       });
     }
   }
@@ -310,7 +336,9 @@ async function autoUpdateAllNews() {
   for (const feed of FEED_CONFIG) {
     try {
       const rawXml = await fetchRaw(feed.url);
-      const items = parseXmlItems(rawXml, feed.maxItems);
+      const parsedItems = parseXmlItems(rawXml, feed.maxItems);
+      const items = parsedItems.filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) && isRecentArticle(item.pubDate));
+      console.log(\`   🔎 \${feed.category}: \${parsedItems.length - items.length} items withheld (untrusted source or stale date)\`);
 
       items.forEach((item, i) => {
         // Deduplicate by title substring
@@ -319,7 +347,7 @@ async function autoUpdateAllNews() {
         seenTitles.add(key);
 
         const cleanExcerpt = item.description && item.description.length > 10 ? item.description : item.title;
-        const cleanContent = `<p><strong>${feed.category} डेस्क।</strong> ${item.title}${item.source ? ' — ' + item.source : ''}</p>${cleanExcerpt !== item.title ? '<p>' + cleanExcerpt + '</p>' : ''}`;
+        const cleanContent = `<p><strong>स्रोत से प्राप्त समाचार-संक्षेप:</strong> ${item.title}</p>${cleanExcerpt !== item.title ? '<p>' + cleanExcerpt + '</p>' : ''}<p>यह संक्षेप RSS में उपलब्ध जानकारी पर आधारित है। पूरी रिपोर्ट के लिए मूल स्रोत देखें।</p>`;
 
         const article = {
           id: `live-${feed.categorySlug}-${ts}-${allArticles.length}`,
@@ -330,9 +358,11 @@ async function autoUpdateAllNews() {
           author: feed.author + (item.source ? ` (${item.source})` : ''),
           date: formatHindiTime(item.pubDate),
           publishedAt: item.pubDate || null,
-          readTime: `${Math.floor(Math.random() * 3) + 2} मिनट`,
+          source: item.source,
+          articleUrl: item.articleUrl,
+          readTime: "2 मिनट",
           image: feed.images[i % feed.images.length],
-          views: `${(Math.random() * 30 + 5).toFixed(1)}K`,
+          views: "—",
           content: cleanContent
         };
 
