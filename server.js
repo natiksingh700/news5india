@@ -1093,18 +1093,18 @@ function startServer(portToTry) {
         return json(res,500,{error:'विज्ञापन लोड नहीं हो पाया।'});
       }
     }
-    // Admin can create up to three ads. Uploading to an occupied slot replaces only that slot.
+    // Admin can publish as many ads as needed; each gets its own sequential slot.
     if (pathname === '/api/advertisements' && req.method === 'POST') {
       const user=currentSession(req);
       if(!user || user.role!=='admin') return json(res,403,{error:'यह सुविधा केवल Admin के लिए है।'});
       let client;
       try {
-        const x=await readBody(req,4_000_000),slotNo=Number(x.slotNo);
+        const x=await readBody(req,4_000_000);
         const title=String(x.title||'').trim().slice(0,140),sponsor=String(x.sponsor||'प्रायोजित').trim().slice(0,100);
         const clickUrl=String(x.clickUrl||'').trim(),image=String(x.imageData||'');
         const match=image.match(/^data:image\/(png|jpeg|webp);base64,([A-Za-z0-9+/]+={0,2})$/);
         const validUrl=v=>{try{return ['http:','https:'].includes(new URL(v).protocol);}catch{return false;}};
-        if(![1,2,3].includes(slotNo)||!title||!match||(clickUrl&&!validUrl(clickUrl))) return json(res,400,{error:'1 से 3 में Ad Slot चुनें, नाम और सही इमेज डालें।'});
+        if(!title||!match||(clickUrl&&!validUrl(clickUrl))) return json(res,400,{error:'विज्ञापन का नाम और सही इमेज डालें।'});
         const mime='image/'+match[1],bytes=Buffer.from(match[2],'base64');
         if(bytes.length>2_500_000)return json(res,413,{error:'इमेज 2.5 MB से छोटी रखें।'});
         const signatureOk=mime==='image/png'?bytes.subarray(0,8).equals(Buffer.from([137,80,78,71,13,10,26,10]))
@@ -1112,7 +1112,9 @@ function startServer(portToTry) {
           :bytes.toString('ascii',0,4)==='RIFF'&&bytes.toString('ascii',8,12)==='WEBP';
         if(!signatureOk)return json(res,400,{error:'इमेज फाइल सही PNG, JPG या WEBP होनी चाहिए।'});
         client=await pool.connect();await client.query('BEGIN');
-        await client.query('UPDATE advertisements SET is_active=FALSE WHERE slot_no=$1 AND is_active=TRUE',[slotNo]);
+        await client.query("SELECT pg_advisory_xact_lock(hashtext('news5india_ads_sequence'))");
+        const next=await client.query('SELECT COALESCE(MAX(slot_no),0)+1 AS next_slot FROM advertisements');
+        const slotNo=Number(next.rows[0].next_slot);
         const q=await client.query('INSERT INTO advertisements(slot_no,title,sponsor,click_url,image_data,mime_type,is_active,created_by) VALUES($1,$2,$3,$4,$5,$6,TRUE,$7) RETURNING id,slot_no,title,sponsor,click_url,created_at',[slotNo,title,sponsor||'प्रायोजित',clickUrl||null,image,mime,user.id]);
         await client.query('COMMIT');
         return json(res,201,{success:true,advertisement:q.rows[0]});
