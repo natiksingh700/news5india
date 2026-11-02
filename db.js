@@ -75,6 +75,16 @@ async function initDB() {
       );
     `);
 
+    // 5. Per-user saved reels. Each account has its own saved list.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS saved_reels (
+        user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        reel_id BIGINT NOT NULL REFERENCES reels(id) ON DELETE CASCADE,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (user_id, reel_id)
+      );
+    `);
+
     // 5. Admin-managed sticky sidebar advertisement. Images are stored persistently in PostgreSQL.
     await client.query(`
       CREATE TABLE IF NOT EXISTS advertisements (
