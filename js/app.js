@@ -594,6 +594,12 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch { return ""; }
   }
 
+  function getArticleImageMarkup(item, className, alt, loading = "lazy") {
+    const src = getArticleImage(item);
+    if (!src) return '<div class="news-image-unavailable" role="img" aria-label="फोटो उपलब्ध नहीं">फोटो उपलब्ध नहीं</div>';
+    return '<img src="' + src.replace(/"/g, '&quot;') + '" data-news-fallback alt="' + String(alt || 'News').replace(/"/g, '&quot;') + '" class="' + (className || '') + '" loading="' + loading + '">';
+  }
+
   function bindNewsImageFallbacks(root) {
     if (!root) return;
     root.querySelectorAll("img[data-news-fallback]").forEach(img => {
@@ -627,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     elements.leadStoryContainer.innerHTML = `
       <div class="lead-img-wrap">
-        <img src="${getArticleImage(lead)}" data-news-fallback alt="${lead.title}" class="lead-img" loading="eager" />
+        ${getArticleImageMarkup(lead, "lead-img", lead.title, "eager")}
         <span class="lead-badge">★ बड़ी खबर</span>
       </div>
       <div class="lead-content">
@@ -761,7 +767,7 @@ document.addEventListener("DOMContentLoaded", () => {
     elements.newsCardsGrid.innerHTML = visibleArticles.map(item => `
       <article class="news-card" data-article-id="${item.id}">
         <div class="news-card-img-wrap">
-          <img src="${getArticleImage(item)}" data-news-fallback alt="${item.title}" class="news-card-img" loading="lazy" />
+          ${getArticleImageMarkup(item, "news-card-img", item.title, "lazy")}
           <span class="card-category-badge">${item.category}${item.stateName ? ` • ${item.stateName}` : ''}</span>
         </div>
         <div class="news-card-body">
@@ -892,7 +898,7 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="category-shelf-grid">
             ${items.map(item => `
               <article class="category-shelf-card" data-shelf-article="${item.id}">
-                <img src="${getArticleImage(item)}" data-news-fallback alt="${item.title || 'News'}" loading="lazy">
+                ${getArticleImageMarkup(item, "", item.title || "News", "lazy")}
                 <div class="category-shelf-copy">
                   <span class="category-shelf-meta">${item.stateName ? item.stateName + ' · ' : ''}${item.date || ''}</span>
                   <h4>${item.title}</h4>
