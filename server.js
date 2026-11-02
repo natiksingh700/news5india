@@ -532,7 +532,7 @@ function startServer(portToTry) {
       if (req.method !== 'POST') return json(res,405,{success:false,error:'POST required'});
     }
     if (pathname === '/api/instagram-webhook' && req.method === 'POST') {
-      const supplied = (req.headers.authorization || '').replace(/^Bearer\\s+/i,'');
+      const supplied = (req.headers.authorization || '').replace(/^Bearer\s+/i,'');
       const secret = process.env.WEBHOOK_SECRET || '';
       if (!secret || supplied.length !== secret.length || !crypto.timingSafeEqual(Buffer.from(supplied),Buffer.from(secret))) {
         return json(res,401,{success:false,error:'Webhook authentication required'});
