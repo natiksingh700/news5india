@@ -600,21 +600,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function getArticleImageMarkup(item, className, alt, loading = "lazy") {
     const src = getArticleImage(item);
-    if (!src) return '<div class="news-image-unavailable" role="img" aria-label="फोटो उपलब्ध नहीं">फोटो उपलब्ध नहीं</div>';
-    return '<img src="' + src.replace(/"/g, '&quot;') + '" data-news-fallback alt="' + String(alt || 'News').replace(/"/g, '&quot;') + '" class="' + (className || '') + '" loading="' + loading + '" decoding="async">';
+    const articleUrl = item && typeof item.articleUrl === "string" && /^https:\/\//i.test(item.articleUrl)
+      ? "/api/article-image?url=" + encodeURIComponent(item.articleUrl)
+      : "";
+    const imageSrc = src || articleUrl;
+    if (!imageSrc) return '<div class="news-image-unavailable" role="img" aria-label="फोटो उपलब्ध नहीं">फोटो उपलब्ध नहीं</div>';
+    return '<img src="' + imageSrc.replace(/"/g, '&quot;') + '" data-news-fallback' +
+      (src && articleUrl ? ' data-publisher-fallback="' + articleUrl.replace(/"/g, '&quot;') + '"' : '') +
+      ' alt="' + String(alt || 'News').replace(/"/g, '&quot;') + '" class="' + (className || '') + '" loading="' + loading + '" decoding="async">';
   }
 
   function bindNewsImageFallbacks(root) {
     if (!root) return;
     root.querySelectorAll("img[data-news-fallback]").forEach(img => {
       img.addEventListener("error", () => {
-        if (img.dataset.fallbackApplied === "true") return;
-        img.dataset.fallbackApplied = "true";
+        if (img.dataset.publisherFallback && img.dataset.fallbackApplied !== "true") {
+          img.dataset.fallbackApplied = "true";
+          img.src = img.dataset.publisherFallback;
+          return;
+        }
         const placeholder = document.createElement("div");
         placeholder.className = "news-image-unavailable";
         placeholder.textContent = "फोटो उपलब्ध नहीं";
         img.replaceWith(placeholder);
-      }, { once: true });
+      });
     });
   }
 
