@@ -745,6 +745,18 @@ async function runNewsUpdate(language = 'hi') {
     // Put the newest RSS publication first so the homepage lead and ticker are current.
     allArticles.sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
     await enrichPublisherImages(allArticles, 420, 18);
+    const imageStats = allArticles.reduce((stats, article) => {
+      const source = article.imageSource || (article.image ? 'unknown' : 'missing');
+      stats[source] = (stats[source] || 0) + 1;
+      if (!article.image) stats.missing += 1;
+      return stats;
+    }, { missing: 0 });
+    console.log('🖼️ [News Images] ' + JSON.stringify({
+      total: allArticles.length,
+      withImage: allArticles.filter(article => !!article.image).length,
+      missing: imageStats.missing,
+      bySource: imageStats
+    }));
     const payload = {
       lastUpdated: new Date().toISOString(),
       totalArticles: allArticles.length,
