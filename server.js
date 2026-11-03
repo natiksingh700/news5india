@@ -124,6 +124,15 @@ const FEED_CONFIG = [
       'https://images.unsplash.com/photo-1609946860441-a51ffcf22208?w=600&auto=format&fit=crop&q=80'
     ]
   },
+  // ── Aaj Tak headlines: source-attributed discovery feed ──
+  {
+    url: 'https://news.google.com/rss/search?q=site%3Aaajtak.in&hl=hi&gl=IN&ceid=IN%3Ahi',
+    category: 'आज तक से ताज़ा',
+    categorySlug: 'aajtak',
+    author: 'News5India डेस्क',
+    maxItems: 12,
+    images: []
+  },
   // ── World (विश्व) ──
   {
     url: 'https://news.google.com/rss/headlines/section/topic/WORLD?hl=hi&gl=IN&ceid=IN:hi',
