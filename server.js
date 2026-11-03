@@ -688,7 +688,10 @@ function parseXmlItems(xml, maxItems) {
         description: desc,
         pubDate: dateMatch ? cleanHtmlEntities(dateMatch[1].trim()) : '',
         articleUrl: linkMatch ? cleanHtmlEntities(linkMatch[1].trim()) : '',
-        imageUrl: extractRssImage(itemXml)
+        // Google News RSS frequently exposes its own generic News logo as the
+        // description thumbnail. Never trust that image as a story photo;
+        // recover the article-specific lead image from the publisher page instead.
+        imageUrl: ''
       });
     }
   }
