@@ -599,7 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function getArticleImageMarkup(item, className, alt, loading = "lazy") {
     const src = getArticleImage(item);
     if (!src) return '<div class="news-image-unavailable" role="img" aria-label="फोटो उपलब्ध नहीं">फोटो उपलब्ध नहीं</div>';
-    return '<img src="' + src.replace(/"/g, '&quot;') + '" data-news-fallback alt="' + String(alt || 'News').replace(/"/g, '&quot;') + '" class="' + (className || '') + '" loading="' + loading + '" decoding="async" referrerpolicy="no-referrer">';
+    return '<img src="' + src.replace(/"/g, '&quot;') + '" data-news-fallback alt="' + String(alt || 'News').replace(/"/g, '&quot;') + '" class="' + (className || '') + '" loading="' + loading + '" decoding="async">';
   }
 
   function bindNewsImageFallbacks(root) {
