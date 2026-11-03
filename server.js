@@ -310,9 +310,10 @@ function isGenericNewsImageUrl(value) {
     const url = new URL(raw);
     const host = url.hostname.toLowerCase();
     const path = url.pathname.toLowerCase();
-    // Google News RSS frequently carries genuine publisher photographs on its image CDN.
-    // Reject the News website itself, but do not blanket-block Google image hosts.
-    if (/^(news\.google\.com|www\.google\.com)$/i.test(host)) return true;
+    // Never serve Google News-owned image URLs as article photographs. These often
+    // resolve to the generic multicolour Google News icon, not the publisher photo.
+    // The RSS parser no longer trusts these; real images are extracted from publishers.
+    if (/(^|\\.)((gstatic|googleusercontent)\\.com|google\\.com|news\\.google\\.com)$/.test(host)) return true;
     if (/(logo|favicon|placeholder|default-image|no-image|avatar|profile|icon)([-_.\/]|$)/i.test(path)) return true;
     return false;
   } catch { return true; }
@@ -1140,7 +1141,7 @@ function proxyArticleImages(payload) {
   if (payload && Array.isArray(payload.articles)) {
     payload.articles = payload.articles.map(article => ({
       ...article,
-      image: article.image ? proxiedNewsImage(article.image) : ''
+      image: article.image && !isGenericNewsImageUrl(article.image) ? proxiedNewsImage(article.image) : ''
     }));
   }
   return payload;
