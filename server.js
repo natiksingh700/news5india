@@ -310,9 +310,9 @@ function isGenericNewsImageUrl(value) {
     const url = new URL(raw);
     const host = url.hostname.toLowerCase();
     const path = url.pathname.toLowerCase();
-    // Google-hosted thumbnails can resolve to the generic News icon.
-    // Prefer publisher Open Graph images or verified article-search images.
-    if (/(^|\.)((gstatic|googleusercontent)\.com|google\.com|news\.google\.com)$/.test(host)) return true;
+    // Google News RSS frequently carries genuine publisher photographs on its image CDN.
+    // Reject the News website itself, but do not blanket-block Google image hosts.
+    if (/^(news\.google\.com|www\.google\.com)$/i.test(host)) return true;
     if (/(logo|favicon|placeholder|default-image|no-image|avatar|profile|icon)([-_.\/]|$)/i.test(path)) return true;
     return false;
   } catch { return true; }
