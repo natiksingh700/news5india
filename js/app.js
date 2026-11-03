@@ -591,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const url = new URL(original);
       if (url.protocol === "http:") url.protocol = "https:";
       const host = url.hostname.toLowerCase();
-      if (/^(lh[3-6]\.googleusercontent\.com|encrypted-tbn\d*\.gstatic\.com|t\d\.gstatic\.com)$/.test(host)) return url.href;
+      // Never show Google's generic News logo as a story photograph.
       if (/(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(host)) return "";
       if (/(logo|favicon|placeholder|no-image|default-image|avatar|profile|icon)([-_.\/]|$)/i.test(url.pathname)) return "";
       return url.href;
@@ -601,7 +601,8 @@ document.addEventListener("DOMContentLoaded", () => {
   function getArticleImageMarkup(item, className, alt, loading = "lazy") {
     const src = getArticleImage(item);
     const articleUrl = item && typeof item.articleUrl === "string" && /^https:\/\//i.test(item.articleUrl)
-      ? "/api/article-image?url=" + encodeURIComponent(item.articleUrl)
+      ? "/api/article-image?url=" + encodeURIComponent(item.articleUrl) +
+        "&title=" + encodeURIComponent(String(item.title || "").slice(0, 180))
       : "";
     const imageSrc = src || articleUrl;
     if (!imageSrc) return '<div class="news-image-unavailable" role="img" aria-label="फोटो उपलब्ध नहीं">फोटो उपलब्ध नहीं</div>';
