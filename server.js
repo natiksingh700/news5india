@@ -497,12 +497,12 @@ async function searchGoogleNewsThumbnail(article) {
   try {
     // Search Google News for this exact headline and use only an image attached
     // to a closely matching result, never a generic stock-photo fallback.
-    const query = '"' + title.replace(/["']/g, ' ').replace(/\\s+/g, ' ').slice(0, 180) + '"';
+    const query = '"' + title.replace(/["']/g, ' ').replace(/\s+/g, ' ').slice(0, 180) + '"';
     const feedUrl = 'https://news.google.com/rss/search?q=' + encodeURIComponent(query) + '&hl=hi&gl=IN&ceid=IN:hi';
     const xml = await fetchRaw(feedUrl, 7000);
     const matches = parseXmlItems(xml, 8);
-    const normalize = value => String(value || '').toLowerCase().replace(/[^a-z0-9\\u0900-\\u097f]+/g, ' ').trim();
-    const tokens = normalize(title).split(/\\s+/).filter(token => token.length > 2);
+    const normalize = value => String(value || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g, ' ').trim();
+    const tokens = normalize(title).split(/\s+/).filter(token => token.length > 2);
     let best = null;
     for (const item of matches) {
       if (!item.imageUrl || isGenericNewsImageUrl(item.imageUrl)) continue;
