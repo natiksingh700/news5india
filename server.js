@@ -1240,6 +1240,30 @@ function startServer(portToTry) {
       try {
         if (!fs.existsSync(newsFile)) return json(res,503,{error:'समाचार अपडेट तैयार हो रहा है।',articles:[]});
         const payload = JSON.parse(fs.readFileSync(newsFile,'utf-8'));
+
+        // Retry publisher-thumbnail extraction when RSS supplied no image or an
+        // earlier publisher request failed. This repairs the homepage feed itself,
+        // rather than substituting unrelated stock photos.
+        if (Array.isArray(payload.articles)) {
+          const missingBefore = payload.articles.filter(article =>
+            !article.image || article.imageSource === 'fallback' || isGenericNewsImageUrl(article.image)
+          ).length;
+          if (missingBefore) {
+            await enrichPublisherImages(payload.articles, 18, 6);
+            const repaired = payload.articles.filter(article =>
+              article.image && article.imageSource === 'publisher'
+            ).length;
+            if (repaired) {
+              try {
+                fs.writeFileSync(newsFile, JSON.stringify(payload, null, 2), 'utf-8');
+                console.log('[News Images] On-request publisher thumbnails recovered:', repaired);
+              } catch (writeError) {
+                console.warn('[News Images] Could not persist recovered thumbnails:', writeError.message);
+              }
+            }
+          }
+        }
+
         const updatedAt = Date.parse(payload.lastUpdated || '');
         if (!Number.isFinite(updatedAt) || Date.now() - updatedAt > 24 * 60 * 60 * 1000) {
           return json(res,200,{lastUpdated:payload.lastUpdated || null,totalArticles:0,articles:[],refreshStatus:'stale-cleared'});
