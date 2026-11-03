@@ -993,11 +993,78 @@ function buildEpaperHtml(language = 'hi') {
   '<div class="notice">' + (text ? 'Headlines and summaries are based on the linked publisher reports. Read original sources for full coverage.' : 'समाचारों के शीर्षक और संक्षेप संबंधित प्रकाशकों की रिपोर्ट पर आधारित हैं। विस्तृत जानकारी के लिए मूल स्रोत पढ़ें।') + '</div><footer class="footer">NEWS 5 INDIA MEDIA NETWORK · ' + esc(today) + ' · ' + (articles.length ? articles.length : 0) + ' ' + (text ? 'verified headlines' : 'सत्यापित सुर्खियां') + '</footer></main></body></html>';
 }
 
+function isSafeExternalImageUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    if (url.protocol !== 'https:' || !url.hostname || url.username || url.password) return false;
+    const host = url.hostname.toLowerCase();
+    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local')) return false;
+    if (/^(127\.|10\.|192\.168\.|169\.254\.|0\.|172\.(1[6-9]|2\d|3[01])\.)/.test(host)) return false;
+    return true;
+  } catch { return false; }
+}
+
+function proxiedNewsImage(value) {
+  if (!isSafeExternalImageUrl(value)) return '';
+  return '/api/news-image?url=' + encodeURIComponent(value);
+}
+
+function streamNewsImage(target, res, redirects = 0) {
+  if (redirects > 4 || !isSafeExternalImageUrl(target)) {
+    res.writeHead(400, { 'Cache-Control': 'no-store' });
+    return res.end();
+  }
+  const request = https.get(target, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; News5IndiaBot/1.0)',
+      'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+      'Referer': new URL(target).origin + '/'
+    }
+  }, upstream => {
+    if (upstream.statusCode >= 300 && upstream.statusCode < 400 && upstream.headers.location) {
+      upstream.resume();
+      return streamNewsImage(new URL(upstream.headers.location, target).href, res, redirects + 1);
+    }
+    const type = String(upstream.headers['content-type'] || '').split(';')[0].toLowerCase();
+    if (upstream.statusCode !== 200 || !/^image\/(jpeg|png|webp|gif|avif)$/.test(type)) {
+      upstream.resume();
+      res.writeHead(502, { 'Cache-Control': 'no-store' });
+      return res.end();
+    }
+    res.writeHead(200, {
+      'Content-Type': type,
+      'Cache-Control': 'public, max-age=21600, stale-while-revalidate=86400',
+      'X-Content-Type-Options': 'nosniff'
+    });
+    upstream.pipe(res);
+  });
+  request.setTimeout(10000, () => request.destroy(new Error('Image proxy timeout')));
+  request.on('error', () => {
+    if (!res.headersSent) res.writeHead(502, { 'Cache-Control': 'no-store' });
+    res.end();
+  });
+}
+
+function proxyArticleImages(payload) {
+  if (payload && Array.isArray(payload.articles)) {
+    payload.articles = payload.articles.map(article => ({
+      ...article,
+      image: article.image ? proxiedNewsImage(article.image) : ''
+    }));
+  }
+  return payload;
+}
+
 function startServer(portToTry) {
   const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
 
+    if (pathname === '/api/news-image' && req.method === 'GET') {
+      const target = parsedUrl.searchParams.get('url') || '';
+      if (!isSafeExternalImageUrl(target)) return json(res, 400, { error: 'Invalid image URL' });
+      return streamNewsImage(target, res);
+    }
     if (pathname === '/epaper' && req.method === 'GET') {
       const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
       const documentHtml = buildEpaperHtml(language);
@@ -1065,7 +1132,7 @@ function startServer(portToTry) {
         }
         articles.sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
         await enrichPublisherImages(articles, 40, 8);
-        return json(res, 200, { query, totalArticles: articles.length, articles });
+        return json(res, 200, proxyArticleImages({ query, totalArticles: articles.length, articles }));
       } catch (err) {
         console.error('[Search] Failed:', err.message);
         return json(res, 502, { error: 'अभी खोज उपलब्ध नहीं है। थोड़ी देर बाद कोशिश करें।', articles: [] });
@@ -1118,7 +1185,7 @@ function startServer(portToTry) {
       }));
       articles.sort((a,b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt));
       await enrichPublisherImages(articles, 48, 10);
-      return json(res,200,{page,articles,totalArticles:articles.length,hasMore:articles.length>0});
+      return json(res,200,proxyArticleImages({page,articles,totalArticles:articles.length,hasMore:articles.length>0}));
     }
     if (pathname === '/api/news' && req.method === 'GET') {
       const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
@@ -1130,7 +1197,7 @@ function startServer(portToTry) {
         if (!Number.isFinite(updatedAt) || Date.now() - updatedAt > 24 * 60 * 60 * 1000) {
           return json(res,200,{lastUpdated:payload.lastUpdated || null,totalArticles:0,articles:[],refreshStatus:'stale-cleared'});
         }
-        return json(res,200,payload);
+        return json(res,200,proxyArticleImages(payload));
       } catch(e) {
         console.error('[News API] Read failed:',e.message);
         return json(res,503,{error:'समाचार अभी उपलब्ध नहीं हैं।',articles:[]});
