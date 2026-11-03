@@ -392,11 +392,11 @@ function extractPublisherImage(html, pageUrl) {
   for (const tag of imageTags) {
     const attrs = ['src','data-src','data-lazy-src','data-original','data-original-src','data-url','data-image','data-thumb','data-large-file'];
     for (const attr of attrs) {
-      const match = tag.match(new RegExp('\\b' + attr + '\\s*=\\s*["\\']([^"\\']+)["\\']','i'));
+      const match = tag.match(new RegExp("\\b" + attr + "\\s*=\\s*[\"']([^\"']+)[\"']", "i"));
       if (match) candidates.push(match[1]);
     }
     for (const attr of ['srcset','data-srcset']) {
-      const match = tag.match(new RegExp('\\b' + attr + '\\s*=\\s*["\\']([^"\\']+)["\\']','i'));
+      const match = tag.match(new RegExp("\\b" + attr + "\\s*=\\s*[\"']([^\"']+)[\"']", "i"));
       if (match) candidates.push(match[1].split(',').pop().trim().split(/\s+/)[0]);
     }
   }
