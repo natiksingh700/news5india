@@ -489,6 +489,37 @@ async function getPublisherImage(articleUrl, sourceName = '') {
   }
 }
 
+async function searchGoogleNewsThumbnail(article) {
+  const title = String(article && article.title || '').trim();
+  if (title.length < 12) return '';
+  const cacheKey = 'google-news-search:' + title.toLowerCase();
+  if (publisherImageCache.has(cacheKey)) return publisherImageCache.get(cacheKey);
+  try {
+    // Search Google News for this exact headline and use only an image attached
+    // to a closely matching result, never a generic stock-photo fallback.
+    const query = '"' + title.replace(/["']/g, ' ').replace(/\\s+/g, ' ').slice(0, 180) + '"';
+    const feedUrl = 'https://news.google.com/rss/search?q=' + encodeURIComponent(query) + '&hl=hi&gl=IN&ceid=IN:hi';
+    const xml = await fetchRaw(feedUrl, 7000);
+    const matches = parseXmlItems(xml, 8);
+    const normalize = value => String(value || '').toLowerCase().replace(/[^a-z0-9\\u0900-\\u097f]+/g, ' ').trim();
+    const tokens = normalize(title).split(/\\s+/).filter(token => token.length > 2);
+    let best = null;
+    for (const item of matches) {
+      if (!item.imageUrl || isGenericNewsImageUrl(item.imageUrl)) continue;
+      const candidate = normalize(item.title);
+      const overlap = tokens.length ? tokens.filter(token => candidate.includes(token)).length / tokens.length : 0;
+      if (!best || overlap > best.score) best = { image: item.imageUrl, score: overlap };
+    }
+    const image = best && best.score >= 0.45 ? best.image : '';
+    if (image) publisherImageCache.set(cacheKey, image);
+    if (publisherImageCache.size > 1800) publisherImageCache.delete(publisherImageCache.keys().next().value);
+    return image;
+  } catch (error) {
+    console.warn('[News Images] Google News image search failed:', error.message);
+    return '';
+  }
+}
+
 async function enrichPublisherImages(articles, maxItems = 220, concurrency = 14) {
   const targets = articles.filter(item => item.articleUrl && (
     item.imageSource === 'fallback' || !item.image || isGenericNewsImageUrl(item.image)
@@ -497,13 +528,19 @@ async function enrichPublisherImages(articles, maxItems = 220, concurrency = 14)
   const workers = Array.from({length: Math.min(concurrency, targets.length)}, async () => {
     while (cursor < targets.length) {
       const item = targets[cursor++];
-      const image = await getPublisherImage(item.articleUrl, item.source);
+      let image = await getPublisherImage(item.articleUrl, item.source);
       if (image) {
         item.image = image;
         item.imageSource = 'publisher';
-      } else if (isGenericNewsImageUrl(item.image)) {
-        item.image = '';
-        item.imageSource = 'fallback';
+      } else {
+        image = await searchGoogleNewsThumbnail(item);
+        if (image) {
+          item.image = image;
+          item.imageSource = 'google-news-search';
+        } else if (isGenericNewsImageUrl(item.image)) {
+          item.image = '';
+          item.imageSource = 'fallback';
+        }
       }
     }
   });
