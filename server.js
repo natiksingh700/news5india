@@ -310,8 +310,8 @@ function isGenericNewsImageUrl(value) {
     const url = new URL(raw);
     const host = url.hostname.toLowerCase();
     const path = url.pathname.toLowerCase();
-    // Google News image CDN hosts contain real article thumbnails, not generic logos.
-    if (/^(lh[3-6]\.googleusercontent\.com|encrypted-tbn\d*\.gstatic\.com|t\d\.gstatic\.com)$/.test(host)) return false;
+    // Google-hosted thumbnails can resolve to the generic News icon.
+    // Prefer publisher Open Graph images or verified article-search images.
     if (/(^|\.)((gstatic|googleusercontent)\.com|google\.com|news\.google\.com)$/.test(host)) return true;
     if (/(logo|favicon|placeholder|default-image|no-image|avatar|profile|icon)([-_.\/]|$)/i.test(path)) return true;
     return false;
@@ -1148,8 +1148,10 @@ function startServer(portToTry) {
       const articleUrl = parsedUrl.searchParams.get('url') || '';
       if (!isSafeExternalImageUrl(articleUrl)) return json(res, 400, { error: 'Invalid article URL' });
       try {
-        const imageUrl = await getPublisherImage(articleUrl);
-        if (!imageUrl) {
+        const title = String(parsedUrl.searchParams.get('title') || '').trim().slice(0, 180);
+        let imageUrl = await getPublisherImage(articleUrl);
+        if (!imageUrl && title) imageUrl = await searchGoogleNewsThumbnail({ title });
+        if (!imageUrl || isGenericNewsImageUrl(imageUrl)) {
           res.writeHead(404, { 'Cache-Control': 'no-store' });
           return res.end();
         }
