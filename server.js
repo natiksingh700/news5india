@@ -427,8 +427,8 @@ async function getPublisherImage(articleUrl) {
     publisherImageCache.set(articleUrl, image);
     if (publisherImageCache.size > 1400) publisherImageCache.delete(publisherImageCache.keys().next().value);
     return image;
-  } catch {
-    publisherImageCache.set(articleUrl, '');
+  } catch (error) {
+    // Temporary publisher timeouts/403s must not be cached forever; retry next cycle.
     return '';
   }
 }
@@ -460,7 +460,8 @@ async function enrichPublisherImages(articles, maxItems = 220, concurrency = 14)
       item.imageSource = 'fallback';
       continue;
     }
-    const normalized = item.image.split('#')[0].split('?')[0].toLowerCase();
+    // Keep query strings: image CDNs may serve different photos through one path.
+    const normalized = item.image.split('#')[0].toLowerCase();
     if (seen.has(normalized)) {
       item.image = '';
       item.imageSource = 'fallback';
