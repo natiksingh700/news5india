@@ -588,7 +588,9 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const url = new URL(original);
       if (url.protocol === "http:") url.protocol = "https:";
-      if (/(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(url.hostname.toLowerCase())) return "";
+      const host = url.hostname.toLowerCase();
+      if (/^(lh[3-6]\.googleusercontent\.com|encrypted-tbn\d*\.gstatic\.com|t\d\.gstatic\.com)$/.test(host)) return url.href;
+      if (/(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(host)) return "";
       if (/(logo|favicon|placeholder|no-image|default-image|avatar|profile|icon)([-_.\/]|$)/i.test(url.pathname)) return "";
       return url.href;
     } catch { return ""; }
@@ -597,7 +599,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function getArticleImageMarkup(item, className, alt, loading = "lazy") {
     const src = getArticleImage(item);
     if (!src) return '<div class="news-image-unavailable" role="img" aria-label="फोटो उपलब्ध नहीं">फोटो उपलब्ध नहीं</div>';
-    return '<img src="' + src.replace(/"/g, '&quot;') + '" data-news-fallback alt="' + String(alt || 'News').replace(/"/g, '&quot;') + '" class="' + (className || '') + '" loading="' + loading + '">';
+    return '<img src="' + src.replace(/"/g, '&quot;') + '" data-news-fallback alt="' + String(alt || 'News').replace(/"/g, '&quot;') + '" class="' + (className || '') + '" loading="' + loading + '" decoding="async" referrerpolicy="no-referrer">';
   }
 
   function bindNewsImageFallbacks(root) {
