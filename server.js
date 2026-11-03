@@ -301,6 +301,8 @@ function isGenericNewsImageUrl(value) {
     const url = new URL(raw);
     const host = url.hostname.toLowerCase();
     const path = url.pathname.toLowerCase();
+    // Google News image CDN hosts contain real article thumbnails, not generic logos.
+    if (/^(lh[3-6]\.googleusercontent\.com|encrypted-tbn\d*\.gstatic\.com|t\d\.gstatic\.com)$/.test(host)) return false;
     if (/(^|\.)((gstatic|googleusercontent)\.com|google\.com|news\.google\.com)$/.test(host)) return true;
     if (/(logo|favicon|placeholder|default-image|no-image|avatar|profile|icon)([-_.\/]|$)/i.test(path)) return true;
     return false;
