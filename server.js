@@ -971,10 +971,31 @@ async function initAdmin(){
   const hash=await hashPass(password);
   await pool.query("INSERT INTO users(username,email,password_hash,role) VALUES($1,$2,$3,'admin') ON CONFLICT(username) DO UPDATE SET email=EXCLUDED.email,password_hash=EXCLUDED.password_hash,role='admin'",[username,email,hash]);
 }
-const startupReady = initDB().then(async ready => { if (!ready) return false; await initAdmin(); return true; }).catch(e => { console.error('Database/admin initialization failed:', e.message); return false; });
+// Keep retrying database startup in the background. A temporary Neon/Render
+// network failure during boot must not permanently disable account login until
+// the next deployment. initDB() uses idempotent CREATE/ALTER statements.
+let databaseReady = false;
+async function initializeDatabaseWithRetry() {
+  while (!databaseReady) {
+    try {
+      const ready = await initDB();
+      if (ready) {
+        await initAdmin();
+        databaseReady = true;
+        console.log('✅ [Auth] Database and admin account are ready.');
+        break;
+      }
+    } catch (e) {
+      console.error('[Auth] Database/admin initialization attempt failed:', e.message);
+    }
+    console.warn('[Auth] Database is not ready; retrying in 15 seconds.');
+    await new Promise(resolve => setTimeout(resolve, 15000));
+  }
+}
+initializeDatabaseWithRetry();
 async function authRoute(req,res,path){
   // Do not authenticate until DB schema and the admin password hash are initialized.
-  if (!(await startupReady)) return json(res,503,{error:'सर्वर का डेटाबेस तैयार नहीं है। Render में DATABASE_URL जांचें और कुछ देर बाद दोबारा कोशिश करें।'});
+  if (!databaseReady) return json(res,503,{error:'सर्वर का डेटाबेस तैयार नहीं है। कनेक्शन अपने आप दोबारा प्रयास किया जा रहा है, कृपया कुछ देर बाद कोशिश करें।'});
   if(path==='/api/auth/me'&&req.method==='GET'){const u=currentSession(req);return json(res,200,{authenticated:!!u,user:u?{id:u.id,username:u.username,role:u.role}:null});}
   if(path==='/api/auth/logout'&&req.method==='POST'){setCookie(res,'',0);return json(res,200,{success:true});}
   if(path==='/api/auth/register'&&req.method==='POST'){
