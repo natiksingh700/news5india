@@ -591,8 +591,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const url = new URL(original);
       if (url.protocol === "http:") url.protocol = "https:";
       const host = url.hostname.toLowerCase();
-      // Never show Google's generic News logo as a story photograph.
-      if (/(^|\.)(gstatic\.com|googleusercontent\.com|google\.com|news\.google\.com)$/.test(host)) return "";
+      // Google News RSS can carry real publisher photos through Google's image CDN.
+      // Reject the News website itself, but do not blanket-block image CDN hosts.
+      if (/^(news\.google\.com|www\.google\.com)$/i.test(host)) return "";
       if (/(logo|favicon|placeholder|no-image|default-image|avatar|profile|icon)([-_.\/]|$)/i.test(url.pathname)) return "";
       return url.href;
     } catch { return ""; }
