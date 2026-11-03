@@ -1107,6 +1107,22 @@ function startServer(portToTry) {
     const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
     const pathname = parsedUrl.pathname;
 
+    if (pathname === '/api/article-image' && req.method === 'GET') {
+      const articleUrl = parsedUrl.searchParams.get('url') || '';
+      if (!isSafeExternalImageUrl(articleUrl)) return json(res, 400, { error: 'Invalid article URL' });
+      try {
+        const imageUrl = await getPublisherImage(articleUrl);
+        if (!imageUrl) {
+          res.writeHead(404, { 'Cache-Control': 'no-store' });
+          return res.end();
+        }
+        return streamNewsImage(imageUrl, res);
+      } catch (error) {
+        console.warn('[News Images] On-demand thumbnail failed:', error.message);
+        res.writeHead(502, { 'Cache-Control': 'no-store' });
+        return res.end();
+      }
+    }
     if (pathname === '/api/news-image' && req.method === 'GET') {
       const target = parsedUrl.searchParams.get('url') || '';
       if (!isSafeExternalImageUrl(target)) return json(res, 400, { error: 'Invalid image URL' });
