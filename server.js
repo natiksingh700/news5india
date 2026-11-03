@@ -427,17 +427,64 @@ function extractPublisherImage(html, pageUrl) {
   return '';
 }
 
-async function getPublisherImage(articleUrl) {
+function resolvePublisherLinkFromGoogleNews(html, pageUrl, sourceName = '') {
+  const source = cleanHtmlEntities(String(html || '')).replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+  const candidates = [];
+  const add = (value, label = '') => {
+    if (!value) return;
+    let href = cleanHtmlEntities(String(value)).replace(/&amp;/g, '&').trim();
+    try { href = new URL(href, pageUrl).href; } catch { return; }
+    try {
+      const u = new URL(href);
+      if (u.protocol !== 'https:' || /(^|\.)google\.com$|(^|\.)googleusercontent\.com$|(^|\.)gstatic\.com$/i.test(u.hostname)) return;
+      if (/news\.google\.com|accounts\.google\.com/i.test(u.hostname)) return;
+      const labelText = String(label || '').toLowerCase();
+      const sourceText = String(sourceName || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const hostText = u.hostname.toLowerCase().replace(/[^a-z0-9]+/g, '');
+      const score = (sourceText && (hostText.includes(sourceText) || sourceText.includes(hostText)) ? 100 : 0) +
+        (/article|story|news|india|latest/i.test(u.pathname) ? 5 : 0) +
+        (u.pathname.length > 12 ? 2 : 0) +
+        (labelText.includes('read') || labelText.includes('पूरा') ? 2 : 0);
+      candidates.push({ href: u.href, score });
+    } catch {}
+  };
+  const canonical = source.match(/<link\b[^>]*rel=["']canonical["'][^>]*href=["']([^"']+)/i);
+  if (canonical) add(canonical[1], 'canonical');
+  const ogUrl = source.match(/<meta\b[^>]*property=["']og:url["'][^>]*content=["']([^"']+)/i);
+  if (ogUrl) add(ogUrl[1], 'og url');
+  const anchors = source.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>[\s\S]{0,500}?<\/a>/gi) || [];
+  for (const tag of anchors) {
+    const href = (tag.match(/\bhref=["']([^"']+)/i) || [])[1];
+    const label = stripAllHtml(tag);
+    add(href, label);
+  }
+  const urlParams = source.match(/[?&](?:url|u)=https?%3A%2F%2F[^&"']+/gi) || [];
+  for (const item of urlParams) {
+    try { add(decodeURIComponent(item.replace(/^[?&](?:url|u)=/i, '')), 'encoded destination'); } catch {}
+  }
+  candidates.sort((a, b) => b.score - a.score);
+  return candidates[0] ? candidates[0].href : '';
+}
+
+async function getPublisherImage(articleUrl, sourceName = '') {
   if (!articleUrl || !/^https:\/\//i.test(articleUrl)) return '';
-  if (publisherImageCache.has(articleUrl)) return publisherImageCache.get(articleUrl);
+  const cacheKey = articleUrl + '|' + String(sourceName || '').toLowerCase();
+  if (publisherImageCache.has(cacheKey)) return publisherImageCache.get(cacheKey);
   try {
-    const page = await fetchPublisherPage(articleUrl, 7000);
-    const image = extractPublisherImage(page.html, page.finalUrl);
-    publisherImageCache.set(articleUrl, image);
+    let page = await fetchPublisherPage(articleUrl, 9000);
+    let image = extractPublisherImage(page.html, page.finalUrl);
+    if (!image && /(^|\.)news\.google\.com$/i.test(new URL(page.finalUrl).hostname)) {
+      const publisherUrl = resolvePublisherLinkFromGoogleNews(page.html, page.finalUrl, sourceName);
+      if (publisherUrl) {
+        page = await fetchPublisherPage(publisherUrl, 9000);
+        image = extractPublisherImage(page.html, page.finalUrl);
+      }
+    }
+    if (image) publisherImageCache.set(cacheKey, image);
     if (publisherImageCache.size > 1400) publisherImageCache.delete(publisherImageCache.keys().next().value);
     return image;
   } catch (error) {
-    // Temporary publisher timeouts/403s must not be cached forever; retry next cycle.
+    console.warn('[News Images] Publisher image lookup failed:', sourceName || articleUrl, error.message);
     return '';
   }
 }
@@ -450,7 +497,7 @@ async function enrichPublisherImages(articles, maxItems = 220, concurrency = 14)
   const workers = Array.from({length: Math.min(concurrency, targets.length)}, async () => {
     while (cursor < targets.length) {
       const item = targets[cursor++];
-      const image = await getPublisherImage(item.articleUrl);
+      const image = await getPublisherImage(item.articleUrl, item.source);
       if (image) {
         item.image = image;
         item.imageSource = 'publisher';
