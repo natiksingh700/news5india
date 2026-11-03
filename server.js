@@ -348,49 +348,71 @@ async function fetchPublisherPage(articleUrl, timeoutMs = 7000, redirects = 0) {
 
 function extractPublisherImage(html, pageUrl) {
   const candidates = [];
-  const metaTags = html.match(/<meta\b[^>]*>/gi) || [];
+  const source = cleanHtmlEntities(String(html || '')).replace(/\\u0026/g, '&').replace(/\\\//g, '/');
+
+  // Publisher social cards are usually the best, article-specific image.
+  const metaTags = source.match(/<meta\b[^>]*>/gi) || [];
   for (const tag of metaTags) {
-    const property = (tag.match(/\b(?:property|name)\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
+    const key = (tag.match(/\b(?:property|name|itemprop)\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
     const content = (tag.match(/\bcontent\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
-    if (/^(og:image(?::secure_url)?|twitter:image(?::src)?)$/i.test(property) && content) candidates.push(content);
+    if (/^(og:image(?::secure_url)?|twitter:image(?::src)?|image)$/i.test(key) && content) candidates.push(content);
   }
 
-  const linkTags = html.match(/<link\b[^>]*>/gi) || [];
+  const linkTags = source.match(/<link\b[^>]*>/gi) || [];
   for (const tag of linkTags) {
     const rel = (tag.match(/\brel\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
     const href = (tag.match(/\bhref\s*=\s*["']([^"']+)["']/i) || [])[1] || '';
-    if (/image_src/i.test(rel) && href) candidates.push(href);
+    if (/image_src|preload/i.test(rel) && href && /image/i.test(tag)) candidates.push(href);
   }
 
-  const jsonLdBlocks = html.match(/<script\b[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
-  const collectJsonImages = value => {
-    if (!value) return;
-    if (typeof value === 'string') candidates.push(value);
-    else if (Array.isArray(value)) value.forEach(collectJsonImages);
-    else if (typeof value === 'object') {
-      if (value.url) collectJsonImages(value.url);
-      if (value.contentUrl) collectJsonImages(value.contentUrl);
-      if (value.image) collectJsonImages(value.image);
-      if (value.thumbnailUrl) collectJsonImages(value.thumbnailUrl);
-      if (value['@graph']) collectJsonImages(value['@graph']);
+  // Read JSON-LD and common framework hydration payloads.
+  const jsonBlocks = source.match(/<script\b[^>]*(?:type=["']application\/ld\+json["']|id=["']__NEXT_DATA__["'])[^>]*>[\s\S]*?<\/script>/gi) || [];
+  const collectImages = (value, depth = 0) => {
+    if (!value || depth > 12) return;
+    if (typeof value === 'string') {
+      if (/^https?:\/\//i.test(value) && /\.(?:jpe?g|png|webp)(?:[?#]|$)/i.test(value)) candidates.push(value);
+      return;
+    }
+    if (Array.isArray(value)) { value.forEach(v => collectImages(v, depth + 1)); return; }
+    if (typeof value === 'object') {
+      for (const [key, child] of Object.entries(value)) {
+        if (/^(image|images|thumbnail|thumbnailurl|contenturl|url|src|srcset|ogimage)$/i.test(key)) collectImages(child, depth + 1);
+        else if (key === '@graph' || key === 'props' || key === 'pageProps' || key === 'article' || key === 'mainEntity') collectImages(child, depth + 1);
+      }
     }
   };
-  for (const block of jsonLdBlocks) {
+  for (const block of jsonBlocks) {
     const body = block.replace(/^<script[^>]*>/i, '').replace(/<\/script>$/i, '');
-    try { collectJsonImages(JSON.parse(body)); } catch {}
+    try { collectImages(JSON.parse(body)); } catch {}
   }
 
-  const articleImages = html.match(/<(?:article|figure)\b[^>]*>[\s\S]{0,30000}?<img\b[^>]*>/gi) || [];
-  for (const tag of articleImages) {
-    const src = (tag.match(/\b(?:src|data-src|data-lazy-src|data-original)\s*=\s*["']([^"']+)["']/i) || [])[1];
-    if (src) candidates.push(src);
-    const srcset = (tag.match(/\bsrcset\s*=\s*["']([^"']+)["']/i) || [])[1];
-    if (srcset) candidates.push(srcset.split(',').pop().trim().split(/\s+/)[0]);
+  // Many Indian publisher pages lazy-load the lead photograph. Inspect every image,
+  // not just <article>/<figure> tags: several sites place the hero outside those tags.
+  const imageTags = source.match(/<(?:img|source)\b[^>]*>/gi) || [];
+  for (const tag of imageTags) {
+    const attrs = ['src','data-src','data-lazy-src','data-original','data-original-src','data-url','data-image','data-thumb','data-large-file'];
+    for (const attr of attrs) {
+      const match = tag.match(new RegExp('\\b' + attr + '\\s*=\\s*["\\']([^"\\']+)["\\']','i'));
+      if (match) candidates.push(match[1]);
+    }
+    for (const attr of ['srcset','data-srcset']) {
+      const match = tag.match(new RegExp('\\b' + attr + '\\s*=\\s*["\\']([^"\\']+)["\\']','i'));
+      if (match) candidates.push(match[1].split(',').pop().trim().split(/\s+/)[0]);
+    }
   }
 
+  // Extract image URLs from CSS background-image and inline hydration markup.
+  const backgroundMatches = source.match(/(?:background-image\s*:\s*url\(["']?|backgroundImage["']?\s*:\s*["'])https?:[^"' )]+/gi) || [];
+  for (const match of backgroundMatches) candidates.push(match.replace(/^.*?(https?:)/i, '$1'));
+
+  const seen = new Set();
   for (let candidate of candidates) {
     candidate = cleanHtmlEntities(String(candidate).trim()).replace(/&amp;/g, '&');
+    if (/^(data:|blob:|javascript:)/i.test(candidate)) continue;
     try { candidate = new URL(candidate, pageUrl).href; } catch { continue; }
+    const normalized = candidate.split('#')[0];
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
     if (!isGenericNewsImageUrl(candidate) && !/\.(?:svg|gif)(?:[?#]|$)/i.test(candidate)) return candidate;
   }
   return '';
