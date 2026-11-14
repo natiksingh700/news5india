@@ -506,7 +506,7 @@ async function searchGoogleNewsThumbnail(article) {
     const tokens = normalize(title).split(/\\s+/).filter(token => token.length > 2);
     let best = null;
     for (const item of matches) {
-      if (!item.articleUrl || !/^https:\\/\\//i.test(item.articleUrl)) continue;
+      if (!item.articleUrl || !/^https:\/\//i.test(item.articleUrl)) continue;
       const candidate = normalize(item.title);
       const overlap = tokens.length ? tokens.filter(token => candidate.includes(token)).length / tokens.length : 0;
       if (!best || overlap > best.score) best = { articleUrl: item.articleUrl, source: item.source, score: overlap };
