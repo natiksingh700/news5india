@@ -313,7 +313,7 @@ function isGenericNewsImageUrl(value) {
     // Never serve Google News-owned image URLs as article photographs. These often
     // resolve to the generic multicolour Google News icon, not the publisher photo.
     // The RSS parser no longer trusts these; real images are extracted from publishers.
-    if (/(^|\\.)((gstatic|googleusercontent)\\.com|google\\.com|news\\.google\\.com)$/.test(host)) return true;
+    if (/(^|\.)((gstatic|googleusercontent)\.com|google\.com|news\.google\.com)$/.test(host)) return true;
     if (/(logo|favicon|placeholder|default-image|no-image|avatar|profile|icon)([-_.\/]|$)/i.test(path)) return true;
     return false;
   } catch { return true; }
