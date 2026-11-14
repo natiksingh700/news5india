@@ -118,7 +118,15 @@ async function initDB() {
     console.log('✅ [Neon PostgreSQL] Database tables initialized successfully!');
     return true;
   } catch (err) {
-    console.error('❌ [Neon PostgreSQL] Init error:', err.message);
+    console.error('❌ [Neon PostgreSQL] Init error:', {
+      message: err && err.message ? err.message : String(err),
+      code: err && err.code ? err.code : null,
+      detail: err && err.detail ? err.detail : null,
+      hint: err && err.hint ? err.hint : null,
+      severity: err && err.severity ? err.severity : null,
+      where: err && err.where ? err.where : null,
+      stack: err && err.stack ? err.stack : null
+    });
     return false;
   } finally {
     if (client) client.release();
