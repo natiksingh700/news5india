@@ -1297,7 +1297,11 @@ function startServer(portToTry) {
           const items = parseXmlItems(raw, Math.max(feed.maxItems * 10, 40))
             .filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) &&
               isRecentArticle(item.pubDate) && !requiresEditorialReview(item));
-          for (const item of items) {
+          // The first feed refresh already publishes the newest feed.maxItems stories.
+          // RSS providers may ignore the "start" query parameter, so paginate locally
+          // to avoid returning the same first headlines on every load-more request.
+          const pageItems = items.slice(Math.max(0, feed.maxItems || 0) + page * 10);
+          for (const item of pageItems) {
             const key = String(item.title || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g,'').slice(0,110);
             if (!key || seen.has(key)) continue;
             seen.add(key);
