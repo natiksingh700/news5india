@@ -37,6 +37,13 @@ const MIME_TYPES = {
 // Extra coverage: entertainment release calendars, technology, civic and public-interest beats.
 // These are RSS discovery feeds; publication still passes the publisher, freshness and review gates below.
 const EXTRA_FEEDS = [
+  // ── Global coverage: regional world desks ──
+  { query: 'world news Asia China Japan South Korea Taiwan Southeast Asia latest', category: 'विश्व', slug: 'world', author: 'News5Indiaa एशिया डेस्क', maxItems: 4 },
+  { query: 'world news Europe UK France Germany Ukraine Russia European Union latest', category: 'विश्व', slug: 'world', author: 'News5Indiaa यूरोप डेस्क', maxItems: 4 },
+  { query: 'world news Middle East Israel Palestine Gaza Iran Saudi Arabia latest', category: 'विश्व', slug: 'world', author: 'News5Indiaa मिडिल ईस्ट डेस्क', maxItems: 4 },
+  { query: 'world news Africa Nigeria South Africa Sudan Kenya latest', category: 'विश्व', slug: 'world', author: 'News5Indiaa अफ्रीका डेस्क', maxItems: 3 },
+  { query: 'world news United States Canada Mexico Brazil Latin America latest', category: 'विश्व', slug: 'world', author: 'News5Indiaa अमेरिका डेस्क', maxItems: 4 },
+  { query: 'international world diplomacy United Nations global economy climate science latest', category: 'विश्व', slug: 'world', author: 'News5Indiaa ग्लोबल डेस्क', maxItems: 4 },
   { query: '"upcoming movies" OR "release date" India Bollywood Hollywood', category: 'फिल्में', slug: 'movies', author: 'News5Indiaa फिल्म डेस्क', maxItems: 3 },
   { query: '"upcoming web series" OR OTT release date Netflix Prime Video JioHotstar India', category: 'वेब सीरीज़ और OTT', slug: 'ott', author: 'News5Indiaa OTT डेस्क', maxItems: 3 },
   { query: 'Indian television serials daily soaps reality shows TV show latest updates', category: 'टीवी शो और सीरियल', slug: 'tv', author: 'News5Indiaa TV डेस्क', maxItems: 3 },
