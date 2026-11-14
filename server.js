@@ -1127,7 +1127,7 @@ function proxiedNewsImage(value) {
 }
 
 function streamNewsImage(target, res, redirects = 0) {
-  if (redirects > 4 || !isSafeExternalImageUrl(target)) {
+  if (redirects > 4 || !isSafeExternalImageUrl(target) || isGenericNewsImageUrl(target)) {
     res.writeHead(400, { 'Cache-Control': 'no-store' });
     return res.end();
   }
