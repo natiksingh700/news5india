@@ -1284,23 +1284,25 @@ function startServer(portToTry) {
       const language = parsedUrl.searchParams.get('lang') === 'en' ? 'en' : 'hi';
       const page = Math.max(0, Math.min(50, Number.parseInt(parsedUrl.searchParams.get('page') || '0', 10) || 0));
       const activeFeeds = feedsForLanguage(language);
-      const batchSize = 12;
-      const start = (page * batchSize) % activeFeeds.length;
-      const batch = Array.from({length: Math.min(batchSize, activeFeeds.length)}, (_,i) => activeFeeds[(start+i)%activeFeeds.length]);
+      const batchSize = 24;
+      const batchCount = Math.max(1, Math.ceil(activeFeeds.length / batchSize));
+      const pageRound = Math.floor(page / batchCount);
+      const start = (page % batchCount) * batchSize;
+      const batch = activeFeeds.slice(start, start + batchSize);
       const seen = new Set();
       const articles = [];
       await Promise.all(batch.map(async feed => {
         try {
           const feedUrl = new URL(feed.url);
-          feedUrl.searchParams.set('start', String((page + 1) * 10));
-          const raw = await fetchRaw(feedUrl.href, 9000);
-          const items = parseXmlItems(raw, Math.max(feed.maxItems * 10, 40))
+          feedUrl.searchParams.set('start', String((pageRound + 1) * 10));
+          const raw = await fetchRaw(feedUrl.href, 12000);
+          const items = parseXmlItems(raw, Math.max((feed.maxItems || 2) * 20, 100))
             .filter(item => isTrustedPublisher(item.source) && /^https:\/\//i.test(item.articleUrl) &&
               isRecentArticle(item.pubDate) && !requiresEditorialReview(item));
           // The first feed refresh already publishes the newest feed.maxItems stories.
           // RSS providers may ignore the "start" query parameter, so paginate locally
           // to avoid returning the same first headlines on every load-more request.
-          const pageItems = items.slice(Math.max(0, feed.maxItems || 0) + page * 10);
+          const pageItems = items.slice(Math.max(0, feed.maxItems || 0) + pageRound * 10);
           for (const item of pageItems) {
             const key = String(item.title || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]+/g,'').slice(0,110);
             if (!key || seen.has(key)) continue;
